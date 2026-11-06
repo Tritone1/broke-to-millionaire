@@ -1,0 +1,70 @@
+{
+  "version": 3,
+  "style": "warm outlined cartoon with flat colors and soft shading",
+  "locations": {
+    "apartment": "locations/apartment.png",
+    "street": "locations/street.png",
+    "office": "locations/office.png",
+    "university": "locations/university.png",
+    "bank": "locations/bank.png",
+    "cafe": "locations/cafe.png",
+    "casino": "locations/casino.png",
+    "park": "locations/park.png",
+    "hospital": "locations/hospital.png"
+  },
+  "characters": {
+    "player": "characters/player_base.png",
+    "maleBody": "characters/player_body_male_v2.png",
+    "femaleBody": "characters/player_body_female_v2.png",
+    "eventNpc": "characters/npc_mentor.png",
+    "customizationAtlas": "characters/customization_atlas.png",
+    "expressionsAtlas": "characters/expressions_atlas.png",
+    "malePortraitShoulders": "characters/portrait_shoulders_male_v1.png",
+    "femalePortraitShoulders": "characters/portrait_shoulders_female_v1.png",
+    "hairAtlas": "characters/hair_atlas_v3.png",
+    "headAtlases": [
+      "characters/head_atlas_v3_skin_0.png",
+      "characters/head_atlas_v3_skin_1.png",
+      "characters/head_atlas_v3_skin_2.png",
+      "characters/head_atlas_v3_skin_3.png",
+      "characters/head_atlas_v3_skin_4.png",
+      "characters/head_atlas_v3_skin_5.png"
+    ],
+    "unifiedCanvas": {
+      "portrait": {
+        "size": "512x512 per cell",
+        "clothing": "characters/avatar_portrait_clothing.png",
+        "hairBack": "characters/avatar_portrait_hair_back.png",
+        "hairFront": "characters/avatar_portrait_hair_front.png",
+        "headPattern": "characters/avatar_portrait_head_skin_{0-5}.png",
+        "fallback": "characters/avatar_portrait_fallback.png"
+      },
+      "fullBody": {
+        "size": "512x768 per cell",
+        "clothing": "characters/avatar_full_clothing.png",
+        "hairBack": "characters/avatar_full_hair_back.png",
+        "hairFront": "characters/avatar_full_hair_front.png",
+        "headPattern": "characters/avatar_full_head_skin_{0-5}.png"
+      },
+      "build": "npm run assets:build-avatar",
+      "framing": "All layers share one origin. Full scenes scale the complete canvas from the feet anchor; compact scenes and HUD portraits crop the same canvas from anatomical anchors."
+    },
+    "layers": {
+      "body": "512x512 portrait or 512x768 full-body cells sharing the same origin as every other active layer",
+      "head": "unified-canvas six-column by two-row atlases selected by centralized skin token",
+      "hair": "separate unified-canvas back and front atlases; ears are painted in the head layer between them",
+      "portraitShoulders": "dedicated male/female transparent bust layers share the full-body hoodie style and fixed center neckline",
+      "outfit": "customizationAtlas bottom row outfit cutouts",
+      "face": "painted into each head cell so the face, ears, jaw, and neck share one illustration style and skin palette"
+    },
+    "hairstyles": 6,
+    "skinTones": 6,
+    "outfitsPerGender": 8,
+    "expressions": ["neutral", "happy", "sad", "angry", "shocked"]
+  },
+  "replacementRules": {
+    "locations": "Keep portrait 9:16 framing and the same filename.",
+    "characters": "Keep a transparent canvas, full body centered, and the same filename.",
+    "atlases": "Head atlases must keep six centered ethnicity columns and male/female rows. Hair must keep six isolated 1:2 source cells. Run npm run assets:normalize-avatar, then npm run assets:build-avatar after replacing source art."
+  }
+}

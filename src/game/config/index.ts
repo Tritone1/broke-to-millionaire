@@ -1,0 +1,14 @@
+export const GAME_MONTH_SECONDS = 60;
+export const OFFLINE_CAP_GAME_MONTHS = 1;
+export const OFFLINE_CAP_SECONDS = GAME_MONTH_SECONDS * OFFLINE_CAP_GAME_MONTHS;
+export const OFFLINE_SALARY_MONTHS = 1;
+export const BROKER_UNLOCK_NET_WORTH = 25_000;
+export const BUSINESS_UNLOCK_NET_WORTH = 50_000;
+export const MAX_PROMOTION_LEVEL = 5;
+export const LOAN_REQUIRED_JOB_MONTHS = 6;
+export const LOAN_MAX_INCOME_MONTHS = 2;
+export const LOAN_MAX_PAYMENT_SHARE = 0.25;
+export const LOAN_TERM_MONTHS = 12;
+export const LOAN_BASE_APR = 0.18;
+export const DAILY_REWARD_AMOUNTS = [100, 150, 250, 400, 650, 1_000, 1_500] as const;
+export const DAILY_MISSION_REWARDS = { work: 100, trade: 300, business: 750 } as const;

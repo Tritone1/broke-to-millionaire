@@ -1,0 +1,74 @@
+[
+  {
+    "id": "buzz",
+    "left": 113,
+    "top": 37,
+    "right": 399,
+    "bottom": 250,
+    "leftRun": 17,
+    "rightRun": 27,
+    "bottomRun": 2,
+    "leftEyeCoverage": 0,
+    "rightEyeCoverage": 0
+  },
+  {
+    "id": "curly",
+    "left": 84,
+    "top": 15,
+    "right": 424,
+    "bottom": 289,
+    "leftRun": 19,
+    "rightRun": 4,
+    "bottomRun": 3,
+    "leftEyeCoverage": 0.0362,
+    "rightEyeCoverage": 0
+  },
+  {
+    "id": "side-sweep",
+    "left": 72,
+    "top": 5,
+    "right": 432,
+    "bottom": 295,
+    "leftRun": 23,
+    "rightRun": 10,
+    "bottomRun": 2,
+    "leftEyeCoverage": 0.2026,
+    "rightEyeCoverage": 0
+  },
+  {
+    "id": "long-waves",
+    "left": 82,
+    "top": 7,
+    "right": 431,
+    "bottom": 441,
+    "leftRun": 7,
+    "rightRun": 12,
+    "bottomRun": 2,
+    "leftEyeCoverage": 0,
+    "rightEyeCoverage": 0
+  },
+  {
+    "id": "braids",
+    "left": 103,
+    "top": 2,
+    "right": 408,
+    "bottom": 453,
+    "leftRun": 45,
+    "rightRun": 14,
+    "bottomRun": 11,
+    "leftEyeCoverage": 0.1855,
+    "rightEyeCoverage": 0.1329
+  },
+  {
+    "id": "high-ponytail",
+    "left": 72,
+    "top": 7,
+    "right": 433,
+    "bottom": 297,
+    "leftRun": 23,
+    "rightRun": 10,
+    "bottomRun": 2,
+    "leftEyeCoverage": 0.2493,
+    "rightEyeCoverage": 0
+  }
+]

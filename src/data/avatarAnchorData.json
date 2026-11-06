@@ -1,0 +1,91 @@
+{
+  "canvas": { "width": 512, "portraitHeight": 512, "fullHeight": 768 },
+  "anchors": {
+    "headCenter": { "x": 256, "y": 222 },
+    "headTop": { "x": 256, "y": 40 },
+    "crown": { "x": 256, "y": 72 },
+    "forehead": { "x": 256, "y": 158 },
+    "backOfHead": { "x": 256, "y": 118 },
+    "hairline": { "x": 256, "y": 168 },
+    "templeLeft": { "x": 156, "y": 188 },
+    "templeRight": { "x": 356, "y": 188 },
+    "earLeft": { "x": 130, "y": 244 },
+    "earRight": { "x": 382, "y": 244 },
+    "eyeLine": { "x": 256, "y": 224 },
+    "noseTip": { "x": 256, "y": 270 },
+    "mouthLine": { "x": 256, "y": 303 },
+    "chin": { "x": 256, "y": 345 },
+    "nape": { "x": 256, "y": 388 },
+    "neckBase": { "x": 256, "y": 420 },
+    "shirtNeckline": { "x": 256, "y": 438 },
+    "collarTop": { "x": 256, "y": 406 },
+    "shoulderLine": { "x": 256, "y": 452 },
+    "shoulderLeft": { "x": 62, "y": 452 },
+    "shoulderRight": { "x": 450, "y": 452 }
+  },
+  "genderAnchors": {
+    "male": { "headCenterX": 256, "headTop": 40, "chin": 345, "jawLeft": 144, "jawRight": 368, "neckBase": 424, "shoulderLine": 452 },
+    "female": { "headCenterX": 256, "headTop": 40, "chin": 345, "jawLeft": 150, "jawRight": 362, "neckBase": 432, "shoulderLine": 452 }
+  },
+  "headshotCrop": { "x": 0, "y": 0, "width": 512, "height": 512, "topMarginRatio": 0.1, "canvasBleedScale": 1.11, "bottomAligned": true },
+  "creatorLayout": { "showsSettingsGear": false, "bottomPadding": 96 },
+  "proportions": { "headWidth": 320, "shoulderWidth": 512 },
+  "headPlacement": { "x": 46, "y": 40, "width": 420, "height": 420 },
+  "hairSourcePlacement": { "x": 46, "y": -187, "width": 420, "height": 840 },
+  "earMaskRadius": { "x": 34, "y": 54 },
+  "clothingPlacement": { "x": -56, "y": 190, "width": 625, "height": 625 },
+  "outfits": {
+    "casual": {
+      "male": { "sourceWidth": 625, "sourceHeight": 625, "sourceShoulderRatio": 0.3808, "collarOffsetY": 8, "collarScaleX": 1, "collarTopY": 406 },
+      "female": { "sourceWidth": 625, "sourceHeight": 625, "sourceShoulderRatio": 0.432, "collarOffsetY": 4, "collarScaleX": 0.92, "collarTopY": 406 }
+    }
+  },
+  "portraitNeckFit": {
+    "male": { "startY": 333, "midY": 390, "endY": 442, "topHalfWidth": 76, "midHalfWidth": 55, "bottomHalfWidth": 78, "bottomCurveDepth": 10, "feather": 5 },
+    "female": { "startY": 337, "midY": 390, "endY": 454, "topHalfWidth": 60, "midHalfWidth": 56, "bottomHalfWidth": 118, "bottomCurveDepth": 14, "feather": 4 }
+  },
+  "portraitNecklineFront": {
+    "male": { "centerX": 256, "startY": 398, "halfWidth": 104, "feather": 3 },
+    "female": { "centerX": 256, "startY": 406, "halfWidth": 102, "feather": 3 }
+  },
+  "fullNecklineFront": {
+    "male": { "centerX": 256, "startY": 166, "halfWidth": 64, "feather": 3 },
+    "female": { "centerX": 256, "startY": 184, "halfWidth": 76, "feather": 3 }
+  },
+  "fullHeadPlacement": {
+    "male": { "x": 164, "y": -45, "width": 184, "height": 184 },
+    "female": { "x": 166, "y": -68, "width": 180, "height": 180 }
+  },
+  "fullBodyPlacement": {
+    "male": { "x": 0, "y": 0, "width": 512, "height": 768 },
+    "female": { "x": 0, "y": 24, "width": 512, "height": 768 }
+  },
+  "fullCanvasTransform": { "x": 20.48, "y": 59.52, "scale": 0.92 },
+  "fullBodyAnchors": {
+    "headTop": { "x": 256, "y": 18 },
+    "eyeLine": { "x": 256, "y": 92 },
+    "chin": { "x": 256, "y": 141 },
+    "neckBase": { "x": 256, "y": 171 },
+    "shoulders": { "x": 256, "y": 198 },
+    "upperChest": { "x": 256, "y": 262 },
+    "waist": { "x": 256, "y": 372 },
+    "knees": { "x": 256, "y": 584 },
+    "feet": { "x": 256, "y": 744 },
+    "groundLine": { "x": 256, "y": 744 }
+  },
+  "framing": {
+    "marginRatio": 0.08,
+    "fullCharacterHeightRatio": 0.72,
+    "fullGroundRatio": 0.93,
+    "bustAboveHeadRatio": 0.1,
+    "portraitCanvasRatio": 0.92
+  },
+  "hairstyles": [
+    { "id": "buzz", "label": "Buzz cut", "attachments": ["headTop", "hairline", "templeLeft", "templeRight"], "fit": { "x": 0, "y": -3, "scale": 0.98 }, "genderFits": { "male": { "x": 0, "y": -18, "scale": 0.92 }, "female": { "x": 0, "y": -1, "scale": 0.98 } }, "frontMode": "crown", "frontCutoffAnchor": "noseTip", "bounds": { "left": 100, "top": 39, "right": 412, "bottom": 294 } },
+    { "id": "curly", "label": "Curly crop", "attachments": ["headTop", "hairline", "templeLeft", "templeRight"], "fit": { "x": 0, "y": -2, "scale": 1 }, "genderFits": { "male": { "x": 0, "y": -2, "scale": 1 }, "female": { "x": 0, "y": 0, "scale": 1 } }, "frontMode": "crown", "frontCutoffAnchor": "noseTip", "bounds": { "left": 82, "top": 14, "right": 430, "bottom": 310 } },
+    { "id": "side-sweep", "label": "Side sweep", "attachments": ["headTop", "hairline", "templeLeft", "templeRight", "earRight"], "fit": { "x": -4, "y": -2, "scale": 1.02 }, "genderFits": { "male": { "x": -4, "y": -2, "scale": 1.02 }, "female": { "x": -3, "y": 0, "scale": 1.02 } }, "frontMode": "crown", "frontCutoffAnchor": "chin", "bounds": { "left": 66, "top": 8, "right": 446, "bottom": 330 } },
+    { "id": "long-waves", "label": "Long waves", "attachments": ["headTop", "hairline", "templeLeft", "templeRight", "earLeft", "earRight", "nape", "neckBase", "shoulderLeft", "shoulderRight"], "fit": { "x": 0, "y": -4, "scale": 0.98 }, "genderFits": { "male": { "x": 0, "y": -4, "scale": 0.98 }, "female": { "x": 0, "y": -4, "scale": 0.98 } }, "modeFits": { "portrait": { "female": { "x": 0, "y": -4, "scale": 0.98 } }, "full": { "female": { "x": 0, "y": 4, "scale": 0.96 } } }, "frontMode": "split", "bounds": { "left": 62, "top": 2, "right": 450, "bottom": 468 } },
+    { "id": "braids", "label": "Braids", "attachments": ["headTop", "hairline", "templeLeft", "templeRight", "crown", "earLeft", "earRight", "nape", "neckBase", "shoulderLeft", "shoulderRight"], "fit": { "x": 0, "y": -3, "scale": 0.96 }, "genderFits": { "male": { "x": 0, "y": -3, "scale": 0.96 }, "female": { "x": 0, "y": -4, "scale": 0.99 } }, "modeFits": { "portrait": { "female": { "x": 0, "y": -4, "scale": 0.99 } }, "full": { "female": { "x": 0, "y": 7, "scale": 1 } } }, "frontMode": "split", "bounds": { "left": 94, "top": 4, "right": 418, "bottom": 468 } },
+    { "id": "high-ponytail", "label": "Pixie sweep", "attachments": ["headTop", "hairline", "templeLeft", "templeRight", "earRight"], "fit": { "x": -4, "y": -2, "scale": 1.02 }, "genderFits": { "male": { "x": -4, "y": -2, "scale": 1.02 }, "female": { "x": -3, "y": 0, "scale": 1.02 } }, "modeFits": { "portrait": { "female": { "x": -3, "y": 0, "scale": 1.02 } }, "full": { "female": { "x": -3, "y": 0, "scale": 1.02 } } }, "frontMode": "crown", "frontCutoffAnchor": "chin", "bounds": { "left": 66, "top": 8, "right": 446, "bottom": 330 } }
+  ]
+}

@@ -1,0 +1,39 @@
+{
+  "expo": {
+    "name": "Broke to Millionaire",
+    "slug": "rich-simulator",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/release/app-icon.png",
+    "userInterfaceStyle": "light",
+    "scheme": "richsim",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.kanan.richsimulator",
+      "icon": "./assets/release/app-icon.png"
+    },
+    "android": {
+      "package": "com.kanan.richsimulator",
+      "adaptiveIcon": {
+        "backgroundColor": "#F2E5CA",
+        "foregroundImage": "./assets/release/adaptive-foreground.png"
+      }
+    },
+    "plugins": [
+      [
+        "expo-notifications",
+        {
+          "defaultChannel": "cash-reminders"
+        }
+      ],
+      "expo-status-bar",
+      "expo-font"
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "079a11cf-1388-45e6-9925-19a4fad87909"
+      }
+    },
+    "owner": "tritone"
+  }
+}

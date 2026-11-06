@@ -1,0 +1,17 @@
+node_modules/
+.expo/
+dist/
+dist-test/
+dist-*/
+coverage/
+artifacts/
+*.log
+.DS_Store
+*.jks
+*.keystore
+google-services.json
+GoogleService-Info.plist
+.env
+.env.*
+!.env.example
+supabase/.temp/

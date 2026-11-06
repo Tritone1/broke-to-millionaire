@@ -1,0 +1,1 @@
+-- Production-safe seed file. Rich Simulator creates player records through the auth trigger.

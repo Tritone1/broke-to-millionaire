@@ -1,0 +1,30 @@
+# Dependencies and local Expo state
+node_modules/
+.expo/
+.git/
+
+# Generated output and verification artifacts
+dist/
+dist-test/
+dist-avatar-check/
+coverage/
+artifacts/
+
+# Local tests and reports are not needed in native build archives
+src/**/__tests__/
+src/**/*.test.ts
+src/**/*.test.tsx
+docs/
+*.md
+
+# Local logs and platform credentials
+*.log
+.DS_Store
+*.jks
+*.keystore
+google-services.json
+GoogleService-Info.plist
+.env
+.env.*
+!.env.example
+supabase/.temp/
