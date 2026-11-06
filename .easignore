@@ -9,6 +9,7 @@ dist-test/
 dist-avatar-check/
 coverage/
 artifacts/
+eas-inspect-archive/
 
 # Local tests and reports are not needed in native build archives
 src/**/__tests__/
