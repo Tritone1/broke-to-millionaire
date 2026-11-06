@@ -338,7 +338,8 @@ Add a dated entry whenever we complete a phase or make an important monetization
 | 2026-11-06 | Native monetization foundation | Passed locally | Added Google Mobile Ads/UMP and RevenueCat native SDKs, a rewarded $1,000 virtual-cash action, a three-minute natural-break interstitial, production environment guards, and test coverage. |
 | 2026-11-06 | Store artwork | Added | Generated and configured 1024×1024 application/adaptive/splash artwork and a 1024×500 Google Play feature graphic. |
 | 2026-11-06 | Release verification | Passed with expected external blockers | 16 suites/129 tests, ESLint, strict TypeScript, JSX text audit, layer checks, web export, and Android Hermes export passed. `release:check` correctly blocks a production build until the final package, public service IDs/keys, and legal URLs are configured. |
+| 2026-11-07 | Play internal App Bundle | Passed | EAS build `b4ba6045-f864-4437-af4d-54053885b687` finished successfully for `com.kanan.richsimulator`, Expo SDK 58, app `1.0.0`, version code `5`. The signed `.aab` was downloaded to `artifacts/Broke-to-Millionaire-v1.0.0-code5.aab` and verified with SHA-256 `EFDF2394C3C086D33124530831EBF204EAF317795BAC967FF84AD0BBD1A0ABBF`. |
 
 ## Next action
 
-Register one final package in Play Console's Android developer-verification/package-name flow and put that accepted lowercase identifier into `app.json`. Then create the matching AdMob Android app, production Supabase project, and RevenueCat project. Keep passwords, 2FA codes, private keys, service-role keys, and service-account JSON private.
+Upload `artifacts/Broke-to-Millionaire-v1.0.0-code5.aab` to the existing `Broke to Millionaire` Play Console app's Internal testing track. The registered package and bundle package are both `com.kanan.richsimulator`. Then add testers, save the draft release, and start the internal rollout. Keep passwords, 2FA codes, private keys, service-role keys, and service-account JSON private.

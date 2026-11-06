@@ -66,8 +66,8 @@ Do not provide passwords, 2FA codes, Supabase service-role keys, RevenueCat secr
 
 ## Exact next sequence
 
-1. Build the test Android App Bundle with `npx eas-cli@latest build --platform android --profile playInternal`.
-2. Upload it to Internal testing for installation and gameplay testing.
+1. [Completed 2026-11-07] Build the test Android App Bundle with `npx eas-cli@latest build --platform android --profile playInternal`. EAS build `b4ba6045-f864-4437-af4d-54053885b687`, app `1.0.0`, version code `5`, finished successfully.
+2. Upload `artifacts/Broke-to-Millionaire-v1.0.0-code5.aab` to Internal testing for installation and gameplay testing.
 3. Configure AdMob, Supabase, RevenueCat, and EAS production environment variables.
 4. Run `npm run release:check` until it passes.
 5. Build the final Android App Bundle with `npx eas-cli@latest build --platform android --profile production`.
