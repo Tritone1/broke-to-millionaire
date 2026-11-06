@@ -17,6 +17,7 @@
     "assets:build-avatar": "node scripts/build-unified-avatar.cjs",
     "assets:preview-avatar": "node scripts/render-avatar-verification.cjs",
     "check:layers": "node scripts/check-avatar-layers.cjs",
+    "check:eas-archive": "node scripts/check-eas-archive-assets.cjs",
     "screenshots:avatar": "node scripts/capture-avatar-screens.cjs",
     "release:check": "node scripts/check-release-config.cjs",
     "eas-build-pre-install": "node scripts/eas-build-pre-install.cjs",

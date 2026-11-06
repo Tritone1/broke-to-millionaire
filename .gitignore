@@ -5,6 +5,7 @@ dist-test/
 dist-*/
 coverage/
 artifacts/
+eas-inspect-archive/
 *.log
 .DS_Store
 *.jks
