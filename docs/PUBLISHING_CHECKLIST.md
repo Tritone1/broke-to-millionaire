@@ -22,7 +22,7 @@ This is the single checklist we will follow to release Broke to Millionaire. Com
 - [x] Native Google Mobile Ads SDK, consent flow, rewarded ads, and natural-break interstitial logic are implemented with official test IDs.
 - [x] RevenueCat native SDK is installed; paid products remain disabled until store products and the hosted wallet are configured.
 - [x] Secure server-wallet, idempotency, cloud-save, auth, and webhook source exists locally.
-- [ ] A production Supabase database and authentication system are deployed and verified.
+- [x] A production Supabase database and authentication system are deployed and verified.
 - [ ] Store accounts, products, privacy declarations, and listings are complete.
 
 ---
@@ -235,10 +235,18 @@ Official guides:
 
 **Goal:** make the monetized game reviewable and legally supportable.
 
-- [ ] **Kanan — Release blocker:** publish a Privacy Policy at a public HTTPS URL.
-- [ ] **Kanan — Release blocker:** publish Terms of Service at a public HTTPS URL.
-- [ ] **Kanan — Release blocker:** provide a public support URL and support email.
-- [x] **Developer:** link Privacy Policy, Terms, support, privacy choices, and account deletion from Settings. Public HTTPS URLs still need to be supplied.
+- [x] **Kanan — Release blocker:** publish a Privacy Policy at a public HTTPS URL.
+- [x] **Kanan — Release blocker:** publish Terms of Service at a public HTTPS URL.
+- [x] **Kanan — Release blocker:** provide a public support URL and support email (`liligames.support@gmail.com`).
+- [x] **Developer:** link Privacy Policy, Terms, support, privacy choices, and account deletion from Settings. The URLs are configured in the EAS `development`, `preview`, and `production` environments.
+
+### Published legal and support pages
+
+- Privacy Policy: <https://broke-to-millionaire-legal.roangerbil1.chatgpt.site/privacy>
+- Terms of Service: <https://broke-to-millionaire-legal.roangerbil1.chatgpt.site/terms>
+- Support and account deletion: <https://broke-to-millionaire-legal.roangerbil1.chatgpt.site/support>
+- Support email: `liligames.support@gmail.com`
+- Verified on 2026-11-07: all three public pages returned HTTP 200 without authentication and displayed the support email.
 - [ ] **Developer — Release blocker:** inventory all collected data and third-party SDK data use.
 - [ ] **Kanan — Release blocker:** complete Google Play Data Safety accurately.
 - [ ] **Kanan — Release blocker:** complete Apple App Privacy answers accurately.

@@ -28,3 +28,4 @@ GoogleService-Info.plist
 .env.*
 !.env.example
 supabase/.temp/
+.sites/
