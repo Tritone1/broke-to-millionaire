@@ -23,9 +23,13 @@ Deno.serve(async (request) => {
     const rawQuery = new URL(request.url).search.slice(1);
     const signatureBoundary = rawQuery.indexOf('&signature=');
     if (signatureBoundary < 0) return jsonResponse({ error: 'The callback signature is missing.' }, 400);
-    // Google's reference verifier uses the decoded URI query (not the raw
-    // percent-escaped query) while preserving its original parameter order.
-    const signedContent = decodeURIComponent(rawQuery.slice(0, signatureBoundary));
+    const rawSignedContent = rawQuery.slice(0, signatureBoundary);
+    // Google's Java reference verifier uses URI.getQuery(), which decodes
+    // percent escapes while preserving parameter order. Keep the raw form as
+    // a compatibility candidate because edge runtimes receive the original
+    // Request URL and AdMob verification requests can differ in escaping.
+    const signedContentCandidates = [decodeURIComponent(rawSignedContent), rawSignedContent]
+      .filter((value, index, values) => values.indexOf(value) === index);
     const params = new URLSearchParams(rawQuery);
     const signature = params.get('signature') ?? '';
     const keyId = params.get('key_id') ?? '';
@@ -44,7 +48,14 @@ Deno.serve(async (request) => {
     const keySet = await keyResponse.json() as AdMobKeys;
     const key = keySet.keys.find((item) => String(item.keyId ?? item.key_id) === keyId);
     if (!key?.pem) return jsonResponse({ error: 'The AdMob signing key is unknown.' }, 401);
-    if (!await verifyAdMobSignature({ content: signedContent, signature, keyPem: key.pem })) {
+    let verified = false;
+    for (const content of signedContentCandidates) {
+      if (await verifyAdMobSignature({ content, signature, keyPem: key.pem })) {
+        verified = true;
+        break;
+      }
+    }
+    if (!verified) {
       return jsonResponse({ error: 'The AdMob signature is invalid.' }, 401);
     }
 

@@ -78,11 +78,28 @@ export async function verifyAdMobSignature(input: {
     false,
     ['verify'],
   );
-  const derSignature = base64UrlBytes(input.signature);
-  return crypto.subtle.verify(
-    { name: 'ECDSA', hash: 'SHA-256' },
-    key,
-    derEcdsaToRaw(derSignature),
-    encoder.encode(input.content),
-  );
+  const encodedSignature = base64UrlBytes(input.signature);
+  const signatureCandidates: Uint8Array[] = [encodedSignature];
+
+  // AdMob publishes ASN.1 DER ECDSA signatures. WebCrypto runtimes are not
+  // consistent here: some accept DER while standards-oriented runtimes expect
+  // IEEE-P1363 r||s bytes. Verify the same signature in both encodings. This
+  // does not relax authenticity: both candidates still have to validate with
+  // Google's current public key over the exact callback content.
+  try {
+    signatureCandidates.push(derEcdsaToRaw(encodedSignature));
+  } catch {
+    // Keep the original candidate so a runtime that accepts its native
+    // encoding can still verify it. An invalid signature simply returns false.
+  }
+
+  for (const candidate of signatureCandidates) {
+    if (await crypto.subtle.verify(
+      { name: 'ECDSA', hash: 'SHA-256' },
+      key,
+      candidate,
+      encoder.encode(input.content),
+    )) return true;
+  }
+  return false;
 }
