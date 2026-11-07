@@ -37,14 +37,6 @@ Deno.serve(async (request) => {
     if (!signature || !/^\d+$/.test(keyId) || !isUuid(userId) || transactionId.length < 3) {
       return jsonResponse({ error: 'The callback fields are invalid.' }, 400);
     }
-    if (!Number.isSafeInteger(configuredAmount) || configuredAmount <= 0 || callbackAmount !== configuredAmount) {
-      return jsonResponse({ error: 'The callback reward does not match the configured reward.' }, 422);
-    }
-    const allowedUnits = expectedAdUnits();
-    if (allowedUnits.size === 0 || !allowedUnits.has(adUnitId)) {
-      return jsonResponse({ error: 'The rewarded ad unit is not allowed.' }, 403);
-    }
-
     const keyResponse = await fetch(KEY_URL, { headers: { accept: 'application/json' } });
     if (!keyResponse.ok) throw new Error(`AdMob key server returned ${keyResponse.status}.`);
     const keySet = await keyResponse.json() as AdMobKeys;
@@ -59,6 +51,14 @@ Deno.serve(async (request) => {
     // crediting a player account.
     if (userId === SSV_VERIFICATION_USER_ID && customData === SSV_VERIFICATION_CUSTOM_DATA) {
       return jsonResponse({ accepted: true, verification: true });
+    }
+
+    if (!Number.isSafeInteger(configuredAmount) || configuredAmount <= 0 || callbackAmount !== configuredAmount) {
+      return jsonResponse({ error: 'The callback reward does not match the configured reward.' }, 422);
+    }
+    const allowedUnits = expectedAdUnits();
+    if (allowedUnits.size === 0 || !allowedUnits.has(adUnitId)) {
+      return jsonResponse({ error: 'The rewarded ad unit is not allowed.' }, 403);
     }
 
     const admin = createAdminClient();

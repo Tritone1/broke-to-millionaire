@@ -45,7 +45,7 @@ describe('production backend artifacts', () => {
     expect(admob).toContain('ADMOB_REWARDED_AD_UNIT_IDS');
     expect(admob).toContain('SSV_VERIFICATION_USER_ID');
     expect(admob).toContain('SSV_VERIFICATION_CUSTOM_DATA');
-    expect(admob).toMatch(/verifyAdMobSignature[\s\S]+verification: true/);
+    expect(admob).toMatch(/verifyAdMobSignature[\s\S]+verification: true[\s\S]+rewarded ad unit is not allowed/);
     expect(admob).toContain('admin_process_ad_reward');
     const nativeAds = read('src/services/ads.native.tsx');
     expect(nativeAds).toContain('rewardedRequestOptions(userId, placement)');
