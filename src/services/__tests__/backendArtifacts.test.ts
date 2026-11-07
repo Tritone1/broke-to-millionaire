@@ -47,7 +47,8 @@ describe('production backend artifacts', () => {
     expect(admob).toContain('SSV_VERIFICATION_CUSTOM_DATA');
     expect(admob).toContain('decodeURIComponent(rawSignedContent)');
     expect(admob).toContain('signedContentCandidates');
-    expect(admob).toMatch(/verifyAdMobSignature[\s\S]+verification: true[\s\S]+rewarded ad unit is not allowed/);
+    expect(admob.indexOf('verification: true')).toBeLessThan(admob.indexOf('await verifyAdMobSignature'));
+    expect(admob).toMatch(/verifyAdMobSignature[\s\S]+rewarded ad unit is not allowed[\s\S]+admin_process_ad_reward/);
     expect(admob).toContain('admin_process_ad_reward');
     const nativeAds = read('src/services/ads.native.tsx');
     expect(nativeAds).toContain('rewardedRequestOptions(userId, placement)');

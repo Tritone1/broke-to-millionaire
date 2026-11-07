@@ -43,6 +43,16 @@ Deno.serve(async (request) => {
     if (!signature || !/^\d+$/.test(keyId) || !isUuid(userId) || transactionId.length < 3) {
       return jsonResponse({ error: 'The callback fields are invalid.' }, 400);
     }
+
+    // AdMob's console sends a non-rewarding probe when "Check URL" is used.
+    // A successful response only proves that the public HTTPS endpoint is
+    // reachable. This sentinel can never credit money: it exits before the
+    // database RPC and is not a real player ID. Real reward callbacks continue
+    // through Google's public-key signature verification below.
+    if (userId === SSV_VERIFICATION_USER_ID && customData === SSV_VERIFICATION_CUSTOM_DATA) {
+      return jsonResponse({ accepted: true, verification: true });
+    }
+
     const keyResponse = await fetch(KEY_URL, { headers: { accept: 'application/json' } });
     if (!keyResponse.ok) throw new Error(`AdMob key server returned ${keyResponse.status}.`);
     const keySet = await keyResponse.json() as AdMobKeys;
@@ -57,13 +67,6 @@ Deno.serve(async (request) => {
     }
     if (!verified) {
       return jsonResponse({ error: 'The AdMob signature is invalid.' }, 401);
-    }
-
-    // AdMob signs its callback-URL verification request. A dedicated UUID and
-    // marker let the console confirm this endpoint without creating or
-    // crediting a player account.
-    if (userId === SSV_VERIFICATION_USER_ID && customData === SSV_VERIFICATION_CUSTOM_DATA) {
-      return jsonResponse({ accepted: true, verification: true });
     }
 
     if (!Number.isSafeInteger(configuredAmount) || configuredAmount <= 0 || callbackAmount !== configuredAmount) {
