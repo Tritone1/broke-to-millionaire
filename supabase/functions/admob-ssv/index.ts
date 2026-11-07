@@ -23,7 +23,9 @@ Deno.serve(async (request) => {
     const rawQuery = new URL(request.url).search.slice(1);
     const signatureBoundary = rawQuery.indexOf('&signature=');
     if (signatureBoundary < 0) return jsonResponse({ error: 'The callback signature is missing.' }, 400);
-    const signedContent = rawQuery.slice(0, signatureBoundary);
+    // Google's reference verifier uses the decoded URI query (not the raw
+    // percent-escaped query) while preserving its original parameter order.
+    const signedContent = decodeURIComponent(rawQuery.slice(0, signatureBoundary));
     const params = new URLSearchParams(rawQuery);
     const signature = params.get('signature') ?? '';
     const keyId = params.get('key_id') ?? '';
