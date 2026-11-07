@@ -6,6 +6,8 @@ type AdMobKey = { keyId?: number; key_id?: number; pem: string };
 type AdMobKeys = { keys: AdMobKey[] };
 
 const KEY_URL = 'https://www.gstatic.com/admob/reward/verifier-keys.json';
+const SSV_VERIFICATION_USER_ID = '00000000-0000-4000-8000-000000000001';
+const SSV_VERIFICATION_CUSTOM_DATA = 'admob_ssv_verification';
 
 function expectedAdUnits(): Set<string> {
   return new Set((Deno.env.get('ADMOB_REWARDED_AD_UNIT_IDS') ?? '')
@@ -28,6 +30,7 @@ Deno.serve(async (request) => {
     const userId = params.get('user_id') ?? '';
     const transactionId = params.get('transaction_id') ?? '';
     const adUnitId = params.get('ad_unit') ?? '';
+    const customData = params.get('custom_data');
     const callbackAmount = Number(params.get('reward_amount'));
     const configuredAmount = Number(Deno.env.get('ADMOB_REWARD_AMOUNT') ?? '1000');
 
@@ -51,13 +54,20 @@ Deno.serve(async (request) => {
       return jsonResponse({ error: 'The AdMob signature is invalid.' }, 401);
     }
 
+    // AdMob signs its callback-URL verification request. A dedicated UUID and
+    // marker let the console confirm this endpoint without creating or
+    // crediting a player account.
+    if (userId === SSV_VERIFICATION_USER_ID && customData === SSV_VERIFICATION_CUSTOM_DATA) {
+      return jsonResponse({ accepted: true, verification: true });
+    }
+
     const admin = createAdminClient();
     const { data, error } = await admin.rpc('admin_process_ad_reward', {
       p_transaction_id: transactionId,
       p_user_id: userId,
       p_ad_unit_id: adUnitId,
       p_reward_amount: configuredAmount,
-      p_custom_data: params.get('custom_data'),
+      p_custom_data: customData,
     });
     if (error) throw error;
     return jsonResponse({ accepted: true, result: data });
