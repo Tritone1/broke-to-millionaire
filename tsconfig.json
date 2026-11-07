@@ -13,6 +13,7 @@
     "**/*.tsx"
   ],
   "exclude": [
+    "eas-inspect-archive/**/*",
     "supabase/functions/**/*"
   ]
 }

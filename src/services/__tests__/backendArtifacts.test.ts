@@ -44,5 +44,8 @@ describe('production backend artifacts', () => {
     expect(admob).toContain('verifyAdMobSignature');
     expect(admob).toContain('ADMOB_REWARDED_AD_UNIT_IDS');
     expect(admob).toContain('admin_process_ad_reward');
+    const nativeAds = read('src/services/ads.native.tsx');
+    expect(nativeAds).toContain('rewardedRequestOptions(userId, placement)');
+    expect(nativeAds).toContain('ensureGuestSession()');
   });
 });

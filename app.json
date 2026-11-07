@@ -10,7 +10,10 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.kanan.richsimulator",
-      "icon": "./assets/release/app-icon.png"
+      "icon": "./assets/release/app-icon.png",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "package": "com.kanan.richsimulator",

@@ -102,36 +102,36 @@ Official guide: <https://docs.expo.dev/develop/development-builds/introduction/>
 
 **Goal:** make purchased and rewarded currency server-authoritative.
 
-**Local implementation status:** the SQL schema, RLS policies, trusted wallet RPCs, Expo client, account UI, RevenueCat webhook, AdMob SSV callback, and account-deletion function are implemented and covered by repository tests. The release-blocker boxes below remain open until Kanan creates a hosted Supabase project and the migration/functions are deployed and verified there. Follow `docs/SUPABASE_SETUP.md`.
+**Production deployment status:** project `rich-simulator-production` is deployed in Stockholm. The SQL schema, RLS policies, trusted wallet RPCs, account UI, RevenueCat webhook, AdMob SSV callback, and account-deletion function are live. Anonymous sign-in, trigger creation, wallet reads, client mutation denial, account deletion, and legacy-key rejection passed an end-to-end smoke test on 2026-11-07. Provider secrets and the remaining mobile integrations are tracked in the later phases.
 
 ### Authentication
 
-- [ ] **Developer — Release blocker:** configure Supabase Auth with a stable player ID.
-- [ ] **Developer:** allow an initial anonymous/guest account if appropriate.
-- [ ] **Developer:** provide account linking or recovery before a player spends real money.
-- [ ] **Developer — Release blocker:** add sign-out and account-deletion flows if player accounts are exposed.
+- [x] **Developer — Release blocker:** configure Supabase Auth with a stable player ID.
+- [x] **Developer:** allow an initial anonymous/guest account if appropriate.
+- [x] **Developer:** provide account linking before a player spends real money.
+- [x] **Developer — Release blocker:** add sign-out and account-deletion flows if player accounts are exposed.
 
 ### Database
 
-- [ ] **Developer — Release blocker:** create `profiles`.
-- [ ] **Developer — Release blocker:** create `wallets`.
-- [ ] **Developer — Release blocker:** create an append-only `wallet_ledger`.
-- [ ] **Developer — Release blocker:** create `purchase_events` with a unique external transaction/event ID.
-- [ ] **Developer — Release blocker:** create `ad_reward_claims` with a unique AdMob transaction ID.
-- [ ] **Developer:** create versioned `cloud_saves`.
+- [x] **Developer — Release blocker:** create `profiles`.
+- [x] **Developer — Release blocker:** create `wallets`.
+- [x] **Developer — Release blocker:** create an append-only `wallet_ledger`.
+- [x] **Developer — Release blocker:** create `purchase_events` with a unique external transaction/event ID.
+- [x] **Developer — Release blocker:** create `ad_reward_claims` with a unique AdMob transaction ID.
+- [x] **Developer:** create versioned `cloud_saves`.
 - [ ] **Developer:** replace the mock leaderboard with `leaderboard_scores` when ready.
-- [ ] **Developer — Release blocker:** enable and verify Row Level Security on every player table.
-- [ ] **Developer — Release blocker:** prevent the mobile client from directly setting wallet balances or inserting trusted rewards.
+- [x] **Developer — Release blocker:** enable and verify Row Level Security on every player table.
+- [x] **Developer — Release blocker:** prevent the mobile client from directly setting wallet balances or inserting trusted rewards.
 
 ### Server functions
 
-- [ ] **Developer — Release blocker:** add an authenticated wallet-read function.
-- [ ] **Developer — Release blocker:** add an idempotent purchase-processing function.
-- [ ] **Developer — Release blocker:** add an AdMob server-side verification callback.
-- [ ] **Developer:** add versioned cloud-save synchronization and conflict handling.
+- [x] **Developer — Release blocker:** add an authenticated wallet-read function.
+- [x] **Developer — Release blocker:** add an idempotent purchase-processing function.
+- [x] **Developer — Release blocker:** add an AdMob server-side verification callback.
+- [x] **Developer:** add versioned cloud-save synchronization and conflict handling.
 - [ ] **Developer:** add validated leaderboard submission.
-- [ ] **Developer:** add account/data deletion.
-- [ ] **Developer — Release blocker:** add server logs without recording secrets or unnecessary personal data.
+- [x] **Developer:** add account/data deletion.
+- [x] **Developer — Release blocker:** add server logs without recording secrets or unnecessary personal data.
 
 **Security invariant:** retrying the same advertisement or purchase callback must never grant money twice.
 
@@ -339,6 +339,8 @@ Add a dated entry whenever we complete a phase or make an important monetization
 | 2026-11-06 | Store artwork | Added | Generated and configured 1024×1024 application/adaptive/splash artwork and a 1024×500 Google Play feature graphic. |
 | 2026-11-06 | Release verification | Passed with expected external blockers | 16 suites/129 tests, ESLint, strict TypeScript, JSX text audit, layer checks, web export, and Android Hermes export passed. `release:check` correctly blocks a production build until the final package, public service IDs/keys, and legal URLs are configured. |
 | 2026-11-07 | Play internal App Bundle | Passed | EAS build `b4ba6045-f864-4437-af4d-54053885b687` finished successfully for `com.kanan.richsimulator`, Expo SDK 58, app `1.0.0`, version code `5`. The signed `.aab` was downloaded to `artifacts/Broke-to-Millionaire-v1.0.0-code5.aab` and verified with SHA-256 `EFDF2394C3C086D33124530831EBF204EAF317795BAC967FF84AD0BBD1A0ABBF`. |
+| 2026-11-07 | Supabase production backend | Passed | Created isolated project `rich-simulator-production` in Stockholm, deployed the migration and three Edge Functions, configured EAS public client values, enabled anonymous auth, disabled legacy API keys, and passed live auth/trigger/wallet/RLS/deletion smoke tests. |
+| 2026-11-07 | Rewarded-ad identity wiring | Passed locally | Native rewarded requests now obtain the current Supabase player UUID and attach it through AdMob server-side verification options. Added regression tests; 18 suites/133 tests, ESLint, strict TypeScript, JSX text audit, and iOS/Android/web production bundles passed. The release gate now reports only AdMob, RevenueCat, and public legal/support configuration. |
 
 ## Next action
 

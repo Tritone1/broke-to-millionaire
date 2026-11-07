@@ -1,15 +1,23 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type PropsWithChildren } from 'react';
-import { Platform } from 'react-native';
-import mobileAds, {
-  AdEventType,
-  AdsConsent,
-  AdsConsentPrivacyOptionsRequirementStatus,
-  InterstitialAd,
-  MaxAdContentRating,
-  RewardedAd,
-  RewardedAdEventType,
-  TestIds,
-} from 'react-native-google-mobile-ads';
+import Constants, { ExecutionEnvironment } from 'expo-constants';
+import { Modal, Platform, StyleSheet, Text, View } from 'react-native';
+import type { InterstitialAd, RewardedAd } from 'react-native-google-mobile-ads';
+
+import { colors } from '../theme';
+import { rewardedRequestOptions } from './adRequest';
+import { ensureGuestSession } from './backend/authService';
+
+type GoogleMobileAdsSdk = typeof import('react-native-google-mobile-ads');
+
+// Expo Go has a fixed native runtime and does not include the Google Mobile Ads
+// module. Keep the require lazy so merely opening the app in Expo Go cannot ask
+// TurboModuleRegistry for a native module that is not present.
+const IS_EXPO_GO = Constants.executionEnvironment === ExecutionEnvironment.StoreClient;
+const googleMobileAdsSdk: GoogleMobileAdsSdk | null = IS_EXPO_GO
+  ? null
+  // The conditional CommonJS load is intentional: an ESM import would crash Expo Go before this guard can run.
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  : require('react-native-google-mobile-ads') as GoogleMobileAdsSdk;
 
 const INTERSTITIAL_COOLDOWN_MS = 180_000;
 
@@ -23,9 +31,9 @@ type AdContextValue = {
 
 const AdContext = createContext<AdContextValue | null>(null);
 
-function configuredUnitId(kind: 'rewarded' | 'interstitial'): string | null {
+function configuredUnitId(kind: 'rewarded' | 'interstitial', sdk: GoogleMobileAdsSdk): string | null {
   const testMode = __DEV__ || process.env.EXPO_PUBLIC_ADS_TEST_MODE === 'true';
-  if (testMode) return kind === 'rewarded' ? TestIds.REWARDED : TestIds.INTERSTITIAL;
+  if (testMode) return kind === 'rewarded' ? sdk.TestIds.REWARDED : sdk.TestIds.INTERSTITIAL;
   if (Platform.OS === 'android') {
     return kind === 'rewarded'
       ? process.env.EXPO_PUBLIC_ADMOB_ANDROID_REWARDED_ID?.trim() || null
@@ -39,14 +47,24 @@ function configuredUnitId(kind: 'rewarded' | 'interstitial'): string | null {
   return null;
 }
 
-export function RewardedAdProvider({ children }: PropsWithChildren) {
+function NativeRewardedAdProvider({ children }: PropsWithChildren) {
+  const sdk = googleMobileAdsSdk!;
+
+  const {
+    default: mobileAds,
+    AdEventType,
+    AdsConsent,
+    AdsConsentPrivacyOptionsRequirementStatus,
+    InterstitialAd,
+    MaxAdContentRating,
+    RewardedAd,
+    RewardedAdEventType,
+  } = sdk;
   const [adsReady, setAdsReady] = useState(false);
   const [privacyOptionsRequired, setPrivacyOptionsRequired] = useState(false);
-  const rewarded = useRef<RewardedAd | null>(null);
+  const activeRewarded = useRef<RewardedAd | null>(null);
   const interstitial = useRef<InterstitialAd | null>(null);
-  const rewardedLoaded = useRef(false);
   const interstitialLoaded = useRef(false);
-  const rewardedEarned = useRef(false);
   const rewardedResolver = useRef<((earned: boolean) => void) | null>(null);
   const showingRewarded = useRef(false);
   const lastInterstitialAt = useRef(0);
@@ -84,39 +102,8 @@ export function RewardedAdProvider({ children }: PropsWithChildren) {
       }
 
       if (!active) return;
-      const rewardedUnitId = configuredUnitId('rewarded');
-      const interstitialUnitId = configuredUnitId('interstitial');
-
-      if (rewardedUnitId) {
-        const ad = RewardedAd.createForAdRequest(rewardedUnitId, {
-          requestNonPersonalizedAdsOnly: false,
-        });
-        rewarded.current = ad;
-        subscriptions.push(
-          ad.addAdEventListener(RewardedAdEventType.LOADED, () => {
-            rewardedLoaded.current = true;
-          }),
-          ad.addAdEventListener(RewardedAdEventType.EARNED_REWARD, () => {
-            rewardedEarned.current = true;
-          }),
-          ad.addAdEventListener(AdEventType.CLOSED, () => {
-            const earned = rewardedEarned.current;
-            rewardedLoaded.current = false;
-            rewardedEarned.current = false;
-            showingRewarded.current = false;
-            rewardedResolver.current?.(earned);
-            rewardedResolver.current = null;
-            ad.load();
-          }),
-          ad.addAdEventListener(AdEventType.ERROR, () => {
-            rewardedLoaded.current = false;
-            showingRewarded.current = false;
-            rewardedResolver.current?.(false);
-            rewardedResolver.current = null;
-          }),
-        );
-        ad.load();
-      }
+      const rewardedUnitId = configuredUnitId('rewarded', sdk);
+      const interstitialUnitId = configuredUnitId('interstitial', sdk);
 
       if (interstitialUnitId) {
         const ad = InterstitialAd.createForAdRequest(interstitialUnitId, {
@@ -150,29 +137,74 @@ export function RewardedAdProvider({ children }: PropsWithChildren) {
       subscriptions.forEach((unsubscribe) => unsubscribe());
       rewardedResolver.current?.(false);
       rewardedResolver.current = null;
-      rewarded.current?.destroy();
+      activeRewarded.current?.destroy();
       interstitial.current?.destroy();
-      rewarded.current = null;
+      activeRewarded.current = null;
       interstitial.current = null;
     };
+    // The native SDK object and its enum members are immutable for the lifetime of the installed binary.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const showRewardedAd = useCallback(async (_placement: string) => {
-    const ad = rewarded.current;
-    if (!ad || !rewardedLoaded.current || showingRewarded.current) {
-      ad?.load();
+  const showRewardedAd = useCallback(async (placement: string) => {
+    if (showingRewarded.current) return false;
+
+    const rewardedUnitId = configuredUnitId('rewarded', sdk);
+    if (!rewardedUnitId) return false;
+
+    let userId: string;
+    try {
+      const session = await ensureGuestSession();
+      if (session.status !== 'ready') return false;
+      userId = session.user.id;
+    } catch {
       return false;
     }
+
     showingRewarded.current = true;
-    rewardedEarned.current = false;
     return new Promise<boolean>((resolve) => {
-      rewardedResolver.current = resolve;
-      void ad.show().catch(() => {
+      let earned = false;
+      let settled = false;
+      let loadTimeout: ReturnType<typeof setTimeout> | null = null;
+      const unsubscribers: (() => void)[] = [];
+      const ad = RewardedAd.createForAdRequest(
+        rewardedUnitId,
+        rewardedRequestOptions(userId, placement),
+      );
+      activeRewarded.current = ad;
+
+      const finish = (completed: boolean) => {
+        if (settled) return;
+        settled = true;
+        if (loadTimeout) clearTimeout(loadTimeout);
+        unsubscribers.forEach((unsubscribe) => unsubscribe());
+        ad.destroy();
+        if (activeRewarded.current === ad) activeRewarded.current = null;
         showingRewarded.current = false;
         rewardedResolver.current = null;
-        resolve(false);
-      });
+        resolve(completed);
+      };
+
+      rewardedResolver.current = (completed) => finish(completed);
+      unsubscribers.push(
+        ad.addAdEventListener(RewardedAdEventType.LOADED, () => {
+          if (loadTimeout) {
+            clearTimeout(loadTimeout);
+            loadTimeout = null;
+          }
+          void ad.show().catch(() => finish(false));
+        }),
+        ad.addAdEventListener(RewardedAdEventType.EARNED_REWARD, () => {
+          earned = true;
+        }),
+        ad.addAdEventListener(AdEventType.CLOSED, () => finish(earned)),
+        ad.addAdEventListener(AdEventType.ERROR, () => finish(earned)),
+      );
+      loadTimeout = setTimeout(() => finish(false), 30_000);
+      ad.load();
     });
+    // The native SDK object and its enum members are immutable for the lifetime of the installed binary.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const showInterstitialIfEligible = useCallback(async () => {
@@ -199,6 +231,8 @@ export function RewardedAdProvider({ children }: PropsWithChildren) {
     } catch {
       // The privacy form is unavailable outside regulated regions or before AdMob is configured.
     }
+    // The native SDK object and its enum members are immutable for the lifetime of the installed binary.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const value = useMemo(() => ({
@@ -212,8 +246,89 @@ export function RewardedAdProvider({ children }: PropsWithChildren) {
   return <AdContext.Provider value={value}>{children}</AdContext.Provider>;
 }
 
+function SimulatedRewardedAdProvider({ children }: PropsWithChildren) {
+  const [visible, setVisible] = useState(false);
+  const [seconds, setSeconds] = useState(5);
+  const [placement, setPlacement] = useState('Reward');
+  const running = useRef(false);
+
+  const showRewardedAd = useCallback(async (nextPlacement: string) => {
+    if (running.current) return false;
+    running.current = true;
+    setPlacement(nextPlacement);
+    setSeconds(5);
+    setVisible(true);
+    for (let remaining = 4; remaining >= 0; remaining -= 1) {
+      await new Promise<void>((resolve) => setTimeout(resolve, 1_000));
+      setSeconds(remaining);
+    }
+    setVisible(false);
+    running.current = false;
+    return true;
+  }, []);
+
+  const showInterstitialIfEligible = useCallback(async () => false, []);
+  const showPrivacyOptions = useCallback(async () => undefined, []);
+  const value = useMemo(() => ({
+    showRewardedAd,
+    showInterstitialIfEligible,
+    showPrivacyOptions,
+    privacyOptionsRequired: false,
+    adsReady: true,
+  }), [showInterstitialIfEligible, showPrivacyOptions, showRewardedAd]);
+
+  return (
+    <AdContext.Provider value={value}>
+      {children}
+      <Modal visible={visible} transparent animationType="fade" statusBarTranslucent>
+        <View style={styles.backdrop}>
+          <View style={styles.adCard}>
+            <Text style={styles.adLabel}>SIMULATED REWARDED AD</Text>
+            <Text style={styles.adIcon}>▶️</Text>
+            <Text style={styles.adTitle}>Watching ad...</Text>
+            <Text style={styles.placement}>{placement}</Text>
+            <Text style={styles.countdown}>{seconds > 0 ? `${seconds}s` : 'Reward unlocked!'}</Text>
+            <Text style={styles.note}>Expo Go uses a test ad. Store builds use Google Mobile Ads.</Text>
+          </View>
+        </View>
+      </Modal>
+    </AdContext.Provider>
+  );
+}
+
+export function RewardedAdProvider({ children }: PropsWithChildren) {
+  if (IS_EXPO_GO) return <SimulatedRewardedAdProvider>{children}</SimulatedRewardedAdProvider>;
+  return <NativeRewardedAdProvider>{children}</NativeRewardedAdProvider>;
+}
+
 export function useRewardedAd(): AdContextValue {
   const context = useContext(AdContext);
   if (!context) throw new Error('useRewardedAd must be used inside RewardedAdProvider');
   return context;
 }
+
+const styles = StyleSheet.create({
+  backdrop: {
+    flex: 1,
+    backgroundColor: colors.overlay,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 24,
+  },
+  adCard: {
+    width: '100%',
+    maxWidth: 380,
+    padding: 28,
+    borderRadius: 24,
+    backgroundColor: '#151515',
+    borderWidth: 1,
+    borderColor: colors.goldDark,
+    alignItems: 'center',
+  },
+  adLabel: { color: colors.gold, fontSize: 11, fontWeight: '800', letterSpacing: 1.4 },
+  adIcon: { fontSize: 56, marginVertical: 18 },
+  adTitle: { color: colors.text, fontSize: 25, fontWeight: '900' },
+  placement: { color: colors.muted, marginTop: 4 },
+  countdown: { color: colors.green, fontSize: 22, fontWeight: '800', marginTop: 18 },
+  note: { color: colors.muted, fontSize: 12, marginTop: 14, textAlign: 'center' },
+});

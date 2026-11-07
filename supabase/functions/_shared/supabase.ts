@@ -7,15 +7,18 @@ function requiredEnvironment(name: string): string {
 }
 
 function serviceKey(): string {
-  const legacy = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')?.trim();
-  if (legacy) return legacy;
-
   const keys = Deno.env.get('SUPABASE_SECRET_KEYS');
   if (keys) {
     const parsed = JSON.parse(keys) as Record<string, string>;
     const key = parsed.default ?? Object.values(parsed)[0];
     if (key) return key;
   }
+
+  // Backward-compatible local development fallback. Hosted production uses
+  // the revocable sb_secret key injected through SUPABASE_SECRET_KEYS.
+  const legacy = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')?.trim();
+  if (legacy) return legacy;
+
   throw new Error('The Supabase server secret key is unavailable.');
 }
 
