@@ -83,9 +83,11 @@ The native application uses `react-native-google-mobile-ads`; Expo Go/web/Jest u
 
 Native advertisements and RevenueCat purchases are not available in standard Expo Go. Build the development client with `eas build --platform android --profile development` before testing either SDK.
 
-## Production backend
+## Production backend and purchases
 
-The repository includes a Supabase migration, secure wallet ledger, cloud-save conflict handling, guest-to-email account linking, account deletion, a RevenueCat HMAC webhook, and an AdMob server-side verification callback. These features remain dormant until public Supabase environment variables are configured, so local play and saves continue to work without a backend.
+The production Supabase project is connected and deployed. It provides the secure wallet ledger, cloud-save conflict handling, guest-to-email account linking, account deletion, an authenticated RevenueCat webhook, refund/revocation adjustments, and the AdMob server-side verification callback. The Store screen loads localized Google Play prices through RevenueCat; cash is credited only after the server records and exposes a verified grant. `remove_ads` suppresses automatic interstitials while keeping voluntary rewarded ads available.
+
+The RevenueCat webhook currently requires both its private URL token and matching Authorization header. HMAC verification is also implemented and activates when `REVENUECAT_WEBHOOK_SIGNING_SECRET` is configured after enabling HMAC signing in RevenueCat. No server secret is bundled in the application.
 
 Follow [docs/SUPABASE_SETUP.md](./docs/SUPABASE_SETUP.md) to create the hosted project, deploy the schema/functions, configure provider secrets, and run the duplicate-callback security checks. Never bundle a Supabase service key or webhook secret in the app.
 

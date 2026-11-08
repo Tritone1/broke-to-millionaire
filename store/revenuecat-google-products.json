@@ -1,0 +1,192 @@
+{
+  "desired_states": [
+    {
+      "store": "play_store",
+      "create_revenuecat_product": {
+        "app_id": "appd30c456a31",
+        "store_identifier": "cash_5000",
+        "type": "consumable",
+        "display_name": "5,000 Cash",
+        "title": "5,000 Cash"
+      },
+      "common": {
+        "title": "5,000 Cash",
+        "availability": {
+          "territories": {
+            "AZ": true,
+            "US": true
+          },
+          "available_in_new_territories": false
+        },
+        "localizations": {
+          "en-US": {
+            "name": "5,000 Game Cash",
+            "description": "Adds 5,000 virtual cash to your game balance."
+          }
+        },
+        "pricing": {
+          "territory_prices": {
+            "AZ": {
+              "amount_micros": 1690000,
+              "currency": "AZN"
+            },
+            "US": {
+              "amount_micros": 990000,
+              "currency": "USD"
+            }
+          }
+        }
+      },
+      "store_state": {
+        "purchase_options": {
+          "buy": {
+            "buy_option": {
+              "legacy_compatible": true
+            }
+          }
+        }
+      }
+    },
+    {
+      "store": "play_store",
+      "create_revenuecat_product": {
+        "app_id": "appd30c456a31",
+        "store_identifier": "cash_25000",
+        "type": "consumable",
+        "display_name": "25,000 Cash",
+        "title": "25,000 Cash"
+      },
+      "common": {
+        "title": "25,000 Cash",
+        "availability": {
+          "territories": {
+            "AZ": true,
+            "US": true
+          },
+          "available_in_new_territories": false
+        },
+        "localizations": {
+          "en-US": {
+            "name": "25,000 Game Cash",
+            "description": "Adds 25,000 virtual cash to your game balance."
+          }
+        },
+        "pricing": {
+          "territory_prices": {
+            "AZ": {
+              "amount_micros": 4990000,
+              "currency": "AZN"
+            },
+            "US": {
+              "amount_micros": 2990000,
+              "currency": "USD"
+            }
+          }
+        }
+      },
+      "store_state": {
+        "purchase_options": {
+          "buy": {
+            "buy_option": {
+              "legacy_compatible": true
+            }
+          }
+        }
+      }
+    },
+    {
+      "store": "play_store",
+      "create_revenuecat_product": {
+        "app_id": "appd30c456a31",
+        "store_identifier": "cash_100000",
+        "type": "consumable",
+        "display_name": "100,000 Cash",
+        "title": "100,000 Cash"
+      },
+      "common": {
+        "title": "100,000 Cash",
+        "availability": {
+          "territories": {
+            "AZ": true,
+            "US": true
+          },
+          "available_in_new_territories": false
+        },
+        "localizations": {
+          "en-US": {
+            "name": "100,000 Game Cash",
+            "description": "Adds 100,000 virtual cash to your game balance."
+          }
+        },
+        "pricing": {
+          "territory_prices": {
+            "AZ": {
+              "amount_micros": 13490000,
+              "currency": "AZN"
+            },
+            "US": {
+              "amount_micros": 7990000,
+              "currency": "USD"
+            }
+          }
+        }
+      },
+      "store_state": {
+        "purchase_options": {
+          "buy": {
+            "buy_option": {
+              "legacy_compatible": true
+            }
+          }
+        }
+      }
+    },
+    {
+      "store": "play_store",
+      "create_revenuecat_product": {
+        "app_id": "appd30c456a31",
+        "store_identifier": "remove_ads",
+        "type": "non_consumable",
+        "display_name": "Remove Ads",
+        "title": "Remove Ads"
+      },
+      "common": {
+        "title": "Remove Ads",
+        "availability": {
+          "territories": {
+            "AZ": true,
+            "US": true
+          },
+          "available_in_new_territories": false
+        },
+        "localizations": {
+          "en-US": {
+            "name": "Remove Automatic Ads",
+            "description": "Permanently removes automatic interstitial ads. Rewarded ads remain optional."
+          }
+        },
+        "pricing": {
+          "territory_prices": {
+            "AZ": {
+              "amount_micros": 8490000,
+              "currency": "AZN"
+            },
+            "US": {
+              "amount_micros": 4990000,
+              "currency": "USD"
+            }
+          }
+        }
+      },
+      "store_state": {
+        "purchase_options": {
+          "buy": {
+            "buy_option": {
+              "legacy_compatible": true
+            }
+          }
+        }
+      }
+    }
+  ]
+}

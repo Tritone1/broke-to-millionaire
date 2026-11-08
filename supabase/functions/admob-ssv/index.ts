@@ -8,6 +8,7 @@ type AdMobKeys = { keys: AdMobKey[] };
 const KEY_URL = 'https://www.gstatic.com/admob/reward/verifier-keys.json';
 const SSV_VERIFICATION_USER_ID = '00000000-0000-4000-8000-000000000001';
 const SSV_VERIFICATION_CUSTOM_DATA = 'admob_ssv_verification';
+const CASH_REWARD_CUSTOM_DATA = 'Free $1,000 virtual cash';
 
 function expectedAdUnits(): Set<string> {
   return new Set((Deno.env.get('ADMOB_REWARDED_AD_UNIT_IDS') ?? '')
@@ -75,6 +76,9 @@ Deno.serve(async (request) => {
     const allowedUnits = expectedAdUnits();
     if (allowedUnits.size === 0 || !allowedUnits.has(adUnitId)) {
       return jsonResponse({ error: 'The rewarded ad unit is not allowed.' }, 403);
+    }
+    if (customData !== CASH_REWARD_CUSTOM_DATA) {
+      return jsonResponse({ accepted: true, processed: false, reward: 'non_cash' });
     }
 
     const admin = createAdminClient();

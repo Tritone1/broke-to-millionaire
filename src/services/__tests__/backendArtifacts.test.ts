@@ -40,11 +40,14 @@ describe('production backend artifacts', () => {
     const admob = read('supabase/functions/admob-ssv/index.ts');
     expect(revenueCat).toContain('x-revenuecat-webhook-signature');
     expect(revenueCat).toContain('hmacSha256Hex');
+    expect(revenueCat).toContain('REVENUECAT_WEBHOOK_TOKEN');
     expect(revenueCat).toContain('admin_process_purchase_event');
     expect(admob).toContain('verifyAdMobSignature');
     expect(admob).toContain('ADMOB_REWARDED_AD_UNIT_IDS');
     expect(admob).toContain('SSV_VERIFICATION_USER_ID');
     expect(admob).toContain('SSV_VERIFICATION_CUSTOM_DATA');
+    expect(admob).toContain('CASH_REWARD_CUSTOM_DATA');
+    expect(admob).toContain("reward: 'non_cash'");
     expect(admob).toContain('decodeURIComponent(rawSignedContent)');
     expect(admob).toContain('signedContentCandidates');
     expect(admob.indexOf('verification: true')).toBeLessThan(admob.indexOf('await verifyAdMobSignature'));
@@ -53,5 +56,16 @@ describe('production backend artifacts', () => {
     const nativeAds = read('src/services/ads.native.tsx');
     expect(nativeAds).toContain('rewardedRequestOptions(userId, placement)');
     expect(nativeAds).toContain('ensureGuestSession()');
+  });
+
+  it('exposes verified purchase and advertisement rewards through one-time authenticated claims', () => {
+    const purchases = read('supabase/migrations/20261107194500_secure_iap_claims.sql');
+    const refunds = read('supabase/migrations/20261107213000_iap_refund_claims.sql');
+    const ads = read('supabase/migrations/20261107214500_verified_ad_reward_claims.sql');
+    expect(purchases).toContain('claim_iap_grants');
+    expect(refunds).toContain('pe.currency_delta <> 0');
+    expect(ads).toContain('claim_ad_rewards');
+    expect(ads).toContain("ar.custom_data = 'Free $1,000 virtual cash'");
+    expect(ads).toContain('grant execute on function public.claim_ad_rewards() to authenticated');
   });
 });

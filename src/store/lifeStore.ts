@@ -218,6 +218,7 @@ type LifeStore = LifePersistedState & {
   claimOffline: (multiplier: 1 | 2) => void;
   claimDaily: () => boolean;
   claimRewardedCash: () => void;
+  applyVerifiedCashDelta: (amount: number) => void;
   claimMission: (id: string) => boolean;
   claimAchievement: (id: string) => boolean;
   resolveLifeEvent: (choice: 'accept' | 'protect' | number) => void;
@@ -1165,6 +1166,19 @@ export const useLifeStore = create<LifeStore>((set, get) => ({
     set({
       money: add(state.money, reward),
       lifetimeEarnings: add(state.lifetimeEarnings, reward),
+      celebrationNonce: state.celebrationNonce + 1,
+    });
+  },
+  applyVerifiedCashDelta: (amount) => {
+    if (!Number.isSafeInteger(amount) || amount === 0) return;
+    const state = get();
+    if (amount < 0) {
+      set({ money: subtract(state.money, Math.abs(amount)) });
+      return;
+    }
+    set({
+      money: add(state.money, amount),
+      lifetimeEarnings: add(state.lifetimeEarnings, amount),
       celebrationNonce: state.celebrationNonce + 1,
     });
   },

@@ -9,6 +9,7 @@ type AdContextValue = {
   showPrivacyOptions: () => Promise<void>;
   privacyOptionsRequired: boolean;
   adsReady: boolean;
+  cashRewardsRequireServerClaim: boolean;
 };
 
 const AdContext = createContext<AdContextValue | null>(null);
@@ -43,6 +44,7 @@ export function RewardedAdProvider({ children }: PropsWithChildren) {
     showPrivacyOptions,
     privacyOptionsRequired: false,
     adsReady: true,
+    cashRewardsRequireServerClaim: false,
   }), [showInterstitialIfEligible, showPrivacyOptions, showRewardedAd]);
 
   return (

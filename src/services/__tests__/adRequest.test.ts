@@ -1,15 +1,15 @@
-import { rewardedRequestOptions } from '../adRequest';
+import { CASH_REWARD_PLACEMENT, rewardedRequestOptions } from '../adRequest';
 
 describe('rewarded advertisement requests', () => {
   it('associates the callback with the authenticated player', () => {
     const options = rewardedRequestOptions(
       'ae7e6db1-80f5-4c5d-aee0-38a8f01e1af3',
-      ' Free $1,000 virtual cash ',
+      ` ${CASH_REWARD_PLACEMENT} `,
     );
 
     expect(options.serverSideVerificationOptions).toEqual({
       userId: 'ae7e6db1-80f5-4c5d-aee0-38a8f01e1af3',
-      customData: 'Free $1,000 virtual cash',
+      customData: CASH_REWARD_PLACEMENT,
     });
   });
 

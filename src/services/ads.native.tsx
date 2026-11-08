@@ -6,6 +6,7 @@ import type { InterstitialAd, RewardedAd } from 'react-native-google-mobile-ads'
 import { colors } from '../theme';
 import { rewardedRequestOptions } from './adRequest';
 import { ensureGuestSession } from './backend/authService';
+import { useAdAccessStore } from '../store/adAccessStore';
 
 type GoogleMobileAdsSdk = typeof import('react-native-google-mobile-ads');
 
@@ -27,6 +28,7 @@ type AdContextValue = {
   showPrivacyOptions: () => Promise<void>;
   privacyOptionsRequired: boolean;
   adsReady: boolean;
+  cashRewardsRequireServerClaim: boolean;
 };
 
 const AdContext = createContext<AdContextValue | null>(null);
@@ -62,6 +64,7 @@ function NativeRewardedAdProvider({ children }: PropsWithChildren) {
   } = sdk;
   const [adsReady, setAdsReady] = useState(false);
   const [privacyOptionsRequired, setPrivacyOptionsRequired] = useState(false);
+  const removeAds = useAdAccessStore((state) => state.removeAds);
   const activeRewarded = useRef<RewardedAd | null>(null);
   const interstitial = useRef<InterstitialAd | null>(null);
   const interstitialLoaded = useRef(false);
@@ -208,6 +211,7 @@ function NativeRewardedAdProvider({ children }: PropsWithChildren) {
   }, []);
 
   const showInterstitialIfEligible = useCallback(async () => {
+    if (removeAds) return false;
     const ad = interstitial.current;
     if (!ad || !interstitialLoaded.current) {
       ad?.load();
@@ -220,7 +224,7 @@ function NativeRewardedAdProvider({ children }: PropsWithChildren) {
     } catch {
       return false;
     }
-  }, []);
+  }, [removeAds]);
 
   const showPrivacyOptions = useCallback(async () => {
     try {
@@ -241,6 +245,7 @@ function NativeRewardedAdProvider({ children }: PropsWithChildren) {
     showPrivacyOptions,
     privacyOptionsRequired,
     adsReady,
+    cashRewardsRequireServerClaim: true,
   }), [adsReady, privacyOptionsRequired, showInterstitialIfEligible, showPrivacyOptions, showRewardedAd]);
 
   return <AdContext.Provider value={value}>{children}</AdContext.Provider>;
@@ -275,6 +280,7 @@ function SimulatedRewardedAdProvider({ children }: PropsWithChildren) {
     showPrivacyOptions,
     privacyOptionsRequired: false,
     adsReady: true,
+    cashRewardsRequireServerClaim: false,
   }), [showInterstitialIfEligible, showPrivacyOptions, showRewardedAd]);
 
   return (

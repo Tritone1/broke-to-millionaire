@@ -12,13 +12,14 @@ import { LivingScreen } from '../screens/LivingScreen';
 import { MarketScreen } from '../screens/MarketScreen';
 import { MoreScreen } from '../screens/MoreScreen';
 import { ProfileScreen } from '../screens/ProfileScreen';
+import { PurchaseScreen } from '../screens/PurchaseScreen';
 import { StudyScreen } from '../screens/StudyScreen';
 import { WorkScreen } from '../screens/WorkScreen';
 import { WellnessScreen } from '../screens/WellnessScreen';
 import { colors } from '../theme';
 
 export type LifeTabParamList = { Home: undefined; Career: undefined; Business: undefined; Market: undefined; More: undefined };
-export type LifeRootParamList = { Tabs: undefined; Work: undefined; Study: undefined; Casino: undefined; Living: undefined; Wellness: undefined; Budget: undefined; Profile: undefined; AvatarDebug: undefined };
+export type LifeRootParamList = { Tabs: undefined; Work: undefined; Study: undefined; Casino: undefined; Living: undefined; Wellness: undefined; Budget: undefined; Profile: undefined; Store: undefined; AvatarDebug: undefined };
 
 const Tab = createBottomTabNavigator<LifeTabParamList>();
 const Stack = createNativeStackNavigator<LifeRootParamList>();
@@ -51,6 +52,7 @@ export function AppNavigator() {
         <Stack.Screen name="Wellness" component={WellnessScreen} options={{ title: 'Health & Happiness' }} />
         <Stack.Screen name="Budget" component={BudgetScreen} options={{ title: 'Monthly Budget' }} />
         <Stack.Screen name="Profile" component={ProfileScreen} options={{ title: 'Profile & Settings' }} />
+        <Stack.Screen name="Store" component={PurchaseScreen} options={{ title: 'Game Store' }} />
         {__DEV__ ? <Stack.Screen name="AvatarDebug" component={AvatarDebugScreen} options={{ title: 'Avatar Debug' }} /> : null}
       </Stack.Navigator>
     </NavigationContainer>

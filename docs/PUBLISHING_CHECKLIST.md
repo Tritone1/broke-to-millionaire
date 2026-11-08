@@ -20,7 +20,7 @@ This is the single checklist we will follow to release Broke to Millionaire. Com
 - [x] Local saving exists through Zustand and AsyncStorage.
 - [x] Local notifications are configured.
 - [x] Native Google Mobile Ads SDK, consent flow, rewarded ads, and natural-break interstitial logic are implemented with official test IDs.
-- [x] RevenueCat native SDK is installed; paid products remain disabled until store products and the hosted wallet are configured.
+- [x] RevenueCat native SDK, authenticated player identity, Store UI, server wallet grants, refunds, restore flow, and ad-free entitlement handling are implemented.
 - [x] Secure server-wallet, idempotency, cloud-save, auth, and webhook source exists locally.
 - [x] A production Supabase database and authentication system are deployed and verified.
 - [ ] Store accounts, products, privacy declarations, and listings are complete.
@@ -68,13 +68,13 @@ This is the single checklist we will follow to release Broke to Millionaire. Com
 - [x] **Developer:** create and link the EAS project after the owner is chosen.
 - [x] **Kanan — Release blocker:** create a Google Play Console developer account.
 - [x] **Kanan — Release blocker:** Google Play Console identity/account verification is approved.
-- [x] **Kanan — Release blocker:** create and pay for an Apple Developer account.
-- [ ] **Kanan — Release blocker:** confirm Apple Developer membership status is `Active` and provide only the non-secret Team ID/Team Name.
+- [ ] **Kanan — Release blocker:** create and pay for an Apple Developer account when iOS publishing begins.
+- [ ] **Kanan — Release blocker:** confirm the future Apple Developer membership is `Active` and provide only the non-secret Team ID/Team Name.
 - [ ] **Kanan — Release blocker:** complete payment, tax, banking, and identity agreements in Google Play Console.
 - [ ] **Kanan — Release blocker:** complete Agreements, Tax, and Banking in App Store Connect.
-- [ ] **Kanan:** create a Google AdMob account.
-- [ ] **Kanan:** create a RevenueCat project.
-- [ ] **Kanan:** create a Supabase project in the intended production region.
+- [x] **Kanan:** create a Google AdMob account.
+- [x] **Kanan:** create a RevenueCat project.
+- [x] **Kanan:** create a Supabase project in the intended production region.
 
 ### Secret-handling rule
 
@@ -145,13 +145,13 @@ Official Expo/Supabase guide: <https://supabase.com/docs/guides/getting-started/
 
 ### AdMob console
 
-- [ ] **Kanan:** create the Android app in AdMob using the final package accepted by Play Console.
+- [x] **Kanan:** create the Android app in AdMob using the final package accepted by Play Console.
 - [ ] **Kanan:** create the iOS app in AdMob using the final bundle identifier.
-- [ ] **Kanan:** create one Android interstitial ad unit.
-- [ ] **Kanan:** create one Android rewarded ad unit.
+- [x] **Kanan:** create one Android interstitial ad unit.
+- [x] **Kanan:** create one Android rewarded ad unit.
 - [ ] **Kanan:** create one iOS interstitial ad unit.
 - [ ] **Kanan:** create one iOS rewarded ad unit.
-- [ ] **Kanan:** configure rewarded-ad server-side verification to call the backend.
+- [x] **Kanan:** configure rewarded-ad server-side verification to call the backend.
 - [ ] **Kanan:** configure AdMob privacy messages/consent regions.
 - [ ] **Kanan:** provide the App IDs and ad-unit IDs; these IDs are not account passwords.
 
@@ -172,16 +172,16 @@ Official Expo/Supabase guide: <https://supabase.com/docs/guides/getting-started/
 - [x] **Developer — Release blocker:** never interrupt a tap, purchase flow, onboarding step, or important popup.
 - [x] **Developer — Release blocker:** never show an interstitial immediately at app launch.
 - [x] **Developer:** reset the cooldown only after an advertisement is actually shown.
-- [ ] **Developer:** disable interstitials for owners of `remove_ads`.
+- [x] **Developer:** disable interstitials for owners of `remove_ads`.
 
 ### Rewarded advertisement
 
 - [x] **Developer:** add a voluntary button labelled clearly as an advertisement reward.
 - [x] **Kanan:** reward confirmed as **$1,000 virtual game cash**.
 - [x] **Developer — Release blocker:** clearly distinguish virtual game cash from real money.
-- [ ] **Developer — Release blocker:** grant the reward only after a completed reward event and verified server callback.
-- [ ] **Developer — Release blocker:** make every reward claim idempotent.
-- [ ] **Developer:** add loading, unavailable, cancelled, verified, and failed states.
+- [x] **Developer — Release blocker:** grant the production reward through the verified server callback; local/test providers remain simulated.
+- [x] **Developer — Release blocker:** make every reward claim idempotent.
+- [x] **Developer:** add loading, unavailable, cancelled, verified, and failed states.
 
 Official integration guide: <https://docs.page/invertase/react-native-google-mobile-ads>
 
@@ -193,33 +193,32 @@ Official integration guide: <https://docs.page/invertase/react-native-google-mob
 
 ### Product proposal
 
-- [ ] **Kanan:** approve product amounts and regional price tiers.
-- [ ] `cash_5000` — consumable — grants $5,000 game cash.
-- [ ] `cash_25000` — consumable — grants $25,000 game cash.
-- [ ] `cash_100000` — consumable — grants $100,000 game cash.
-- [ ] `starter_pack` — consumable or one-time entitlement, final contents to be approved.
-- [ ] `remove_ads` — non-consumable — removes automatic interstitials but keeps voluntary rewarded ads.
+- [x] **Kanan:** approve product amounts and initial Azerbaijan/United States price tiers.
+- [x] `cash_5000` — consumable — grants $5,000 game cash.
+- [x] `cash_25000` — consumable — grants $25,000 game cash.
+- [x] `cash_100000` — consumable — grants $100,000 game cash.
+- [x] `remove_ads` — non-consumable — removes automatic interstitials but keeps voluntary rewarded ads.
 
 ### Store configuration
 
-- [ ] **Kanan — Release blocker:** create matching products in Google Play Console.
+- [ ] **Kanan — Release blocker:** grant the RevenueCat service account **Manage store presence** for this Play app, then apply prepared plan `ffd6f9e6-88e3-4b7f-94ff-b68fad6b93fd`.
 - [ ] **Kanan — Release blocker:** create matching products in App Store Connect.
 - [ ] **Kanan:** add localized product names, descriptions, prices, and review screenshots.
 - [ ] **Kanan — Release blocker:** accept all paid-app agreements and finish tax/banking setup.
-- [ ] **Kanan:** connect both store applications and products to RevenueCat.
-- [ ] **Kanan:** provide RevenueCat public SDK keys through EAS environment variables.
+- [ ] **Kanan:** connect the future iOS store application and products to RevenueCat. Android is connected.
+- [x] **Kanan:** provide the RevenueCat Android public SDK key through the EAS production environment.
 
 ### Application and server implementation
 
 - [x] **Developer — Release blocker:** install the RevenueCat React Native SDK and native build dependency.
-- [ ] **Developer:** build the in-game store screen with real localized store prices.
-- [ ] **Developer — Release blocker:** handle pending, cancelled, failed, completed, and refunded purchases.
-- [ ] **Developer — Release blocker:** associate purchases with the authenticated player ID.
+- [x] **Developer:** build the in-game store screen with real localized store prices.
+- [x] **Developer — Release blocker:** handle pending, cancelled, failed, completed, restored, and refunded purchases in code.
+- [x] **Developer — Release blocker:** associate purchases with the authenticated Supabase player ID.
 - [ ] **Developer — Release blocker:** configure a signed RevenueCat webhook.
-- [ ] **Developer — Release blocker:** verify the webhook signature and deduplicate its event ID.
-- [ ] **Developer — Release blocker:** add purchased currency through the server wallet ledger, not directly from the client callback.
-- [ ] **Developer:** add Restore Purchases for restorable products such as `remove_ads`.
-- [ ] **Developer:** define refund/revocation behavior and test it.
+- [x] **Developer — Release blocker:** require the private webhook token plus matching Authorization header and deduplicate event IDs. Optional HMAC verification is implemented; its RevenueCat dashboard toggle is still pending.
+- [x] **Developer — Release blocker:** add purchased currency through the server wallet ledger and an authenticated one-time claim RPC, not directly from the purchase callback.
+- [x] **Developer:** add Restore Purchases for restorable products such as `remove_ads`.
+- [x] **Developer:** define refund/revocation behavior, apply signed server adjustments, and floor game cash at zero.
 
 Do not use Stripe, PayPal, or a web checkout inside the native game for virtual currency. Store billing is required for ordinary in-app digital goods.
 
@@ -349,7 +348,8 @@ Add a dated entry whenever we complete a phase or make an important monetization
 | 2026-11-07 | Play internal App Bundle | Passed | EAS build `b4ba6045-f864-4437-af4d-54053885b687` finished successfully for `com.kanan.richsimulator`, Expo SDK 58, app `1.0.0`, version code `5`. The signed `.aab` was downloaded to `artifacts/Broke-to-Millionaire-v1.0.0-code5.aab` and verified with SHA-256 `EFDF2394C3C086D33124530831EBF204EAF317795BAC967FF84AD0BBD1A0ABBF`. |
 | 2026-11-07 | Supabase production backend | Passed | Created isolated project `rich-simulator-production` in Stockholm, deployed the migration and three Edge Functions, configured EAS public client values, enabled anonymous auth, disabled legacy API keys, and passed live auth/trigger/wallet/RLS/deletion smoke tests. |
 | 2026-11-07 | Rewarded-ad identity wiring | Passed locally | Native rewarded requests now obtain the current Supabase player UUID and attach it through AdMob server-side verification options. Added regression tests; 18 suites/133 tests, ESLint, strict TypeScript, JSX text audit, and iOS/Android/web production bundles passed. The release gate now reports only AdMob, RevenueCat, and public legal/support configuration. |
+| 2026-11-07 | Purchase and ad fulfillment | Deployed with one console blocker | Added the Store screen, localized RevenueCat products, authenticated purchase identity, server-only purchase/ad cash claims, restore/ad-free handling, and refund deductions. Non-cash rewarded placements no longer create cash ledger entries. Deployed all claim migrations and both provider callbacks. All 19 suites/137 tests, ESLint, TypeScript, JSX audit, avatar validation, and Android Hermes export passed. Google Play product creation is blocked only by the RevenueCat service account's missing `Manage store presence` permission. |
 
 ## Next action
 
-Upload `artifacts/Broke-to-Millionaire-v1.0.0-code5.aab` to the existing `Broke to Millionaire` Play Console app's Internal testing track. The registered package and bundle package are both `com.kanan.richsimulator`. Then add testers, save the draft release, and start the internal rollout. Keep passwords, 2FA codes, private keys, service-role keys, and service-account JSON private.
+In Play Console, open **Users and permissions**, select the RevenueCat service account, grant **Manage store presence** for `Broke to Millionaire`, and save. Then run `npx @revenuecat/cli products store apply ffd6f9e6-88e3-4b7f-94ff-b68fad6b93fd --project-id proj1df4bf7d --yes`. After the products exist, complete an internal-track purchase/refund/restore test before public release. Keep passwords, 2FA codes, private keys, service-role keys, and service-account JSON private.

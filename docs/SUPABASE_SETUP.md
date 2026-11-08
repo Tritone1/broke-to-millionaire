@@ -11,7 +11,7 @@ The backend code is already in this repository. These steps connect it to a host
 - Idempotent RevenueCat purchase events and AdMob reward claims.
 - Versioned cloud saves with optimistic revision conflict detection.
 - Public read-only leaderboard rows; writes remain server-only.
-- RevenueCat HMAC verification and AdMob ECDSA server-side verification.
+- RevenueCat token/Authorization verification, optional HMAC verification, and AdMob ECDSA server-side verification.
 
 The mobile app never receives the Supabase service key. Only the public project URL and publishable key are bundled in the app.
 
@@ -46,7 +46,7 @@ npx.cmd supabase@latest db push
 npx.cmd supabase@latest db lint --linked
 ```
 
-The migration at `supabase/migrations/20261105163000_initial_backend.sql` creates all tables, policies, triggers, and trusted RPC functions.
+The versioned files in `supabase/migrations/` create all tables, policies, triggers, trusted RPC functions, one-time purchase claims, refund adjustments, and verified advertisement-reward claims.
 
 After deployment, check **Database → Tables** and confirm RLS is enabled for:
 
@@ -88,8 +88,8 @@ Do this only after AdMob and RevenueCat projects exist. Add secrets in **Edge Fu
 | --- | --- |
 | `ADMOB_REWARDED_AD_UNIT_IDS` | Comma-separated Android/iOS rewarded ad-unit IDs |
 | `ADMOB_REWARD_AMOUNT` | `1000` |
-| `REVENUECAT_WEBHOOK_SIGNING_SECRET` | HMAC signing secret generated in RevenueCat |
-| `REVENUECAT_WEBHOOK_AUTHORIZATION` | Optional exact Authorization header configured in RevenueCat |
+| `REVENUECAT_WEBHOOK_TOKEN` | Random private value used in both the callback URL and Bearer Authorization header |
+| `REVENUECAT_WEBHOOK_SIGNING_SECRET` | Optional stronger HMAC secret shown once after HMAC is enabled in RevenueCat |
 | `REVENUECAT_PRODUCT_GRANTS` | JSON such as `{"cash_5000":5000,"cash_25000":25000,"cash_100000":100000}` |
 
 Supabase automatically injects its server URL and server secret into Edge Functions. Do not create or expose replacements in the mobile app.
@@ -109,15 +109,15 @@ https://YOUR_PROJECT_REF.supabase.co/functions/v1/revenuecat-webhook
 https://YOUR_PROJECT_REF.supabase.co/functions/v1/admob-ssv
 ```
 
-`--no-verify-jwt` is intentional: RevenueCat and AdMob do not send Supabase JWTs. Each webhook verifies the provider signature itself. `account-delete` also verifies the supplied player access token inside the function before deleting anything.
+`--no-verify-jwt` is intentional: RevenueCat and AdMob do not send Supabase JWTs. The RevenueCat webhook requires its private URL token and matching Bearer header, and additionally verifies HMAC when the signing secret is configured. AdMob verifies Google's ECDSA signature. `account-delete` verifies the supplied player access token inside the function before deleting anything.
 
 ## 7. Configure provider callbacks
 
 ### RevenueCat
 
-1. Add the RevenueCat webhook URL.
-2. Enable HMAC signing and store the signing secret as `REVENUECAT_WEBHOOK_SIGNING_SECRET`.
-3. Optionally configure an Authorization header and store its exact value as `REVENUECAT_WEBHOOK_AUTHORIZATION`.
+1. Add `?token=YOUR_PRIVATE_TOKEN` to the RevenueCat webhook URL.
+2. Set the webhook Authorization header to `Bearer YOUR_PRIVATE_TOKEN` and store the token as `REVENUECAT_WEBHOOK_TOKEN`.
+3. Enable HMAC signing and store the one-time signing secret as `REVENUECAT_WEBHOOK_SIGNING_SECRET` for stronger verification.
 4. Send sandbox and production events while testing; the ledger stores the environment.
 5. Ensure the RevenueCat App User ID is the authenticated Supabase user UUID.
 
@@ -143,9 +143,9 @@ Do not enable real purchases or production ad rewards until all checks pass:
 7. Delete the account in Profile and confirm all player rows are removed by cascading deletes.
 8. Review Edge Function logs. Logs must contain event names and safe error messages only, never keys, passwords, access tokens, or full webhook bodies.
 
-## Remaining external blockers
+## Current production status
 
-The repository cannot create or deploy into your private Supabase organization without your authenticated session. AdMob IDs, RevenueCat product IDs, HMAC secrets, Play Console products, and store verification must also be completed in their respective owner dashboards.
+The production database migrations and Edge Functions are deployed. AdMob SSV and RevenueCat token/Authorization verification are configured. Remaining owner-console work is tracked in `docs/PUBLISHING_CHECKLIST.md`; provider secrets must stay outside Git.
 
 Official references:
 

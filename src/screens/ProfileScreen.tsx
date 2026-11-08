@@ -7,7 +7,9 @@ import { formatBig, toNumber } from '../game/BigNumber';
 import { prestigePointsForLifetime } from '../game/formulas';
 import { DAILY_MISSION_REWARDS, DAILY_REWARD_AMOUNTS, GAME_MONTH_SECONDS } from '../game/config';
 import { useRewardedAd } from '../services/ads';
+import { CASH_REWARD_PLACEMENT } from '../services/adRequest';
 import { calculateLifeNetWorth, useLifeStore } from '../store/lifeStore';
+import { usePurchaseStore } from '../store/purchaseStore';
 import { useSessionStore } from '../store/sessionStore';
 import { colors } from '../theme';
 import { AppButton } from '../components/AppButton';
@@ -49,7 +51,8 @@ export function ProfileScreen() {
   const state = useLifeStore();
   const navigation = useNavigation();
   const session = useSessionStore();
-  const { adsReady, privacyOptionsRequired, showPrivacyOptions, showRewardedAd } = useRewardedAd();
+  const { adsReady, cashRewardsRequireServerClaim, privacyOptionsRequired, showPrivacyOptions, showRewardedAd } = useRewardedAd();
+  const syncVerifiedCash = usePurchaseStore((purchaseState) => purchaseState.syncPendingCash);
   const [adBusy, setAdBusy] = useState(false);
   const [adMessage, setAdMessage] = useState('');
   const privacyPolicyUrl = process.env.EXPO_PUBLIC_PRIVACY_POLICY_URL?.trim();
@@ -76,14 +79,24 @@ export function ProfileScreen() {
     if (adBusy) return;
     setAdBusy(true);
     setAdMessage('');
-    const completed = await showRewardedAd('Free $1,000 virtual cash');
-    if (completed) {
-      state.claimRewardedCash();
-      setAdMessage('$1,000 virtual game cash added. It has no real-world value.');
-    } else {
-      setAdMessage('The advertisement is not ready or was closed before the reward. Try again shortly.');
+    try {
+      const completed = await showRewardedAd(CASH_REWARD_PLACEMENT);
+      if (!completed) {
+        setAdMessage('The advertisement is not ready or was closed before the reward. Try again shortly.');
+      } else if (cashRewardsRequireServerClaim) {
+        const credited = await syncVerifiedCash(true);
+        setAdMessage(credited > 0
+          ? '$1,000 verified virtual game cash added. It has no real-world value.'
+          : 'Reward completed and is being verified. It will sync automatically shortly.');
+      } else {
+        state.claimRewardedCash();
+        setAdMessage('$1,000 simulated virtual game cash added. It has no real-world value.');
+      }
+    } catch {
+      setAdMessage('The reward could not be synchronized. It will be retried automatically.');
+    } finally {
+      setAdBusy(false);
     }
-    setAdBusy(false);
   };
   const openExternalUrl = async (label: string, url?: string) => {
     if (!url?.startsWith('https://')) {

@@ -17,6 +17,7 @@ import { StartMenuScreen } from './src/screens/StartMenuScreen';
 import { RewardedAdProvider } from './src/services/ads';
 import { createInitialLifeState, useLifeStore } from './src/store/lifeStore';
 import { useSessionStore } from './src/store/sessionStore';
+import { usePurchaseStore } from './src/store/purchaseStore';
 import { colors } from './src/theme';
 
 function GameApp() {
@@ -25,6 +26,7 @@ function GameApp() {
   const bootstrap = useSessionStore((state) => state.bootstrap);
   const hydrated = useLifeStore((state) => state.hydrated);
   const celebrationNonce = useLifeStore((state) => state.celebrationNonce);
+  const initializePurchases = usePurchaseStore((state) => state.initialize);
 
   useEffect(() => {
     void bootstrap().then(() => {
@@ -69,6 +71,10 @@ function GameApp() {
       useSessionStore.setState({ phase: 'game', activeSlot: 1, setupSlot: null });
     });
   }, [bootstrap]);
+
+  useEffect(() => {
+    if (phase === 'game' && hydrated) void initializePurchases();
+  }, [hydrated, initializePurchases, phase]);
 
   if (phase === 'boot') {
     return (

@@ -24,6 +24,7 @@ export function MoreScreen() {
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <Text style={styles.eyebrow}>{character.name.toUpperCase()}’S WORLD</Text>
         <Text style={styles.title}>More to explore</Text>
+        <Card style={styles.card}><Text style={styles.icon}>🛍️</Text><Text style={styles.cardTitle}>Game Store</Text><Text style={styles.body}>Optional cash packs, ad-free access, and purchase restoration.</Text><AppButton onPress={() => navigation.navigate('Store')}>OPEN STORE</AppButton></Card>
         <Card style={styles.card}><Text style={styles.icon}>🏠</Text><Text style={styles.cardTitle}>Life & Family</Text><Text style={styles.body}>Housing, transport, relationships, children, food, and healthcare.</Text><AppButton onPress={() => navigation.navigate('Living')}>MANAGE LIFE</AppButton></Card>
         <Card style={styles.card}><Text style={styles.icon}>♥</Text><Text style={styles.cardTitle}>Health & Happiness</Text><Text style={styles.body}>Restore energy, improve your health and mood, manage stress, and protect your expected lifespan.</Text><AppButton variant="green" onPress={() => navigation.navigate('Wellness')}>OPEN WELLNESS</AppButton></Card>
         <Card style={styles.card}><Text style={styles.icon}>📊</Text><Text style={styles.cardTitle}>Monthly Budget</Text><Text style={styles.body}>Review paycheck income, itemized bills, late balances, and your 12-month history.</Text><AppButton variant="green" onPress={() => navigation.navigate('Budget')}>VIEW BUDGET</AppButton></Card>
