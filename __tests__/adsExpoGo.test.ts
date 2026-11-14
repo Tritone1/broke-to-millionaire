@@ -44,7 +44,8 @@ describe('Expo Go ad service', () => {
     }));
 
     jest.isolateModules(() => {
-      require('../src/services/ads.native');
+      const { RewardedAdProvider } = require('../src/services/ads.native') as typeof import('../src/services/ads.native');
+      RewardedAdProvider({ children: null });
     });
 
     expect(nativeAdsFactory).toHaveBeenCalledTimes(1);

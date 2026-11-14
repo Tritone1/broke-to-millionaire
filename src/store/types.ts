@@ -1,4 +1,5 @@
 import type { BigValue } from '../game/BigNumber';
+import type { Language } from '../data/i18n';
 
 export type RandomEventKind = 'crash' | 'lucky' | 'tax' | 'viral';
 
@@ -19,7 +20,8 @@ export type DailyStats = {
 export type GameSettings = {
   sound: boolean;
   haptics: boolean;
-  language: 'en';
+  language: Language;
+  languageChosen: boolean;
 };
 
 export type PersistedGameState = {

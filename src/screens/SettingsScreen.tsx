@@ -1,4 +1,5 @@
 import Constants from 'expo-constants';
+import { useState } from 'react';
 import { Alert, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
 
 import { clearGame } from '../services/storage';
@@ -8,6 +9,10 @@ import { GAME_MONTH_SECONDS } from '../game/config';
 import { AppButton } from '../components/AppButton';
 import { Card } from '../components/Card';
 import { Screen } from '../components/Screen';
+import { LanguagePickerModal } from '../components/LanguagePicker';
+import { languageOption } from '../data/i18n';
+import { useTranslation } from '../hooks/useTranslation';
+import { useSessionStore } from '../store/sessionStore';
 
 function SettingRow({ icon, title, subtitle, value, onValueChange }: { icon: string; title: string; subtitle: string; value: boolean; onValueChange: (value: boolean) => void }) {
   return (
@@ -24,6 +29,9 @@ function SettingRow({ icon, title, subtitle, value, onValueChange }: { icon: str
 
 export function SettingsScreen() {
   const state = useGameStore();
+  const session = useSessionStore();
+  const { t } = useTranslation();
+  const [languageOpen, setLanguageOpen] = useState(false);
   const appVersion = Constants.expoConfig?.version ?? 'Unknown';
   const nativeBuildVersion = Constants.nativeBuildVersion ?? 'Development';
   const reset = () => {
@@ -43,22 +51,22 @@ export function SettingsScreen() {
   return (
     <Screen>
       <ScrollView contentContainerStyle={styles.content}>
-        <Text style={styles.eyebrow}>PREFERENCES</Text>
-        <Text style={styles.title}>Settings</Text>
+        <Text style={styles.eyebrow}>{t('preferences').toUpperCase()}</Text>
+        <Text style={styles.title}>{t('settings')}</Text>
         <Card style={styles.card}>
-          <SettingRow icon="🔊" title="Sound" subtitle="Game sound effects" value={state.settings.sound} onValueChange={(sound) => state.updateSettings({ sound })} />
+          <SettingRow icon="🔊" title={t('sound')} subtitle={t('soundHint')} value={state.settings.sound} onValueChange={(sound) => state.updateSettings({ sound })} />
           <View style={styles.separator} />
-          <SettingRow icon="📳" title="Haptics" subtitle="Tap and purchase feedback" value={state.settings.haptics} onValueChange={(haptics) => state.updateSettings({ haptics })} />
+          <SettingRow icon="📳" title={t('haptics')} subtitle={t('hapticsHint')} value={state.settings.haptics} onValueChange={(haptics) => state.updateSettings({ haptics })} />
         </Card>
 
-        <Text style={styles.section}>LANGUAGE</Text>
+        <Text style={styles.section}>{t('language').toUpperCase()}</Text>
         <Card style={styles.languageCard}>
-          <Text style={styles.flag}>🇺🇸</Text>
+          <Text style={styles.flag}>{languageOption(session.settings.language).flag}</Text>
           <View style={styles.flex}>
-            <Text style={styles.settingTitle}>English</Text>
-            <Text style={styles.settingSubtitle}>Language-ready key structure</Text>
+            <Text style={styles.settingTitle}>{languageOption(session.settings.language).nativeName}</Text>
+            <Text style={styles.settingSubtitle}>{t('languageHint')}</Text>
           </View>
-          <Text style={styles.check}>✓</Text>
+          <AppButton variant="ghost" onPress={() => setLanguageOpen(true)}>{t('language')}</AppButton>
         </Card>
 
         <Text style={styles.section}>GAME DATA</Text>
@@ -72,6 +80,7 @@ export function SettingsScreen() {
         <AppButton variant="danger" onPress={reset} style={styles.reset}>RESET SAVE</AppButton>
         <Text style={styles.version}>Rich Simulator Idle • v{appVersion} ({nativeBuildVersion})</Text>
       </ScrollView>
+      <LanguagePickerModal visible={languageOpen} selected={session.settings.language} onSelect={(language) => void session.chooseLanguage(language)} onClose={() => setLanguageOpen(false)} />
     </Screen>
   );
 }

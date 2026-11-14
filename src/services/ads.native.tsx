@@ -14,11 +14,20 @@ type GoogleMobileAdsSdk = typeof import('react-native-google-mobile-ads');
 // module. Keep the require lazy so merely opening the app in Expo Go cannot ask
 // TurboModuleRegistry for a native module that is not present.
 const IS_EXPO_GO = Constants.executionEnvironment === ExecutionEnvironment.StoreClient;
-const googleMobileAdsSdk: GoogleMobileAdsSdk | null = IS_EXPO_GO
-  ? null
-  // The conditional CommonJS load is intentional: an ESM import would crash Expo Go before this guard can run.
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  : require('react-native-google-mobile-ads') as GoogleMobileAdsSdk;
+let cachedGoogleMobileAdsSdk: GoogleMobileAdsSdk | null | undefined;
+
+function getGoogleMobileAdsSdk(): GoogleMobileAdsSdk | null {
+  if (IS_EXPO_GO) return null;
+  if (cachedGoogleMobileAdsSdk !== undefined) return cachedGoogleMobileAdsSdk;
+  try {
+    // The conditional CommonJS load is intentional: an ESM import would crash Expo Go before this guard can run.
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    cachedGoogleMobileAdsSdk = require('react-native-google-mobile-ads') as GoogleMobileAdsSdk;
+  } catch {
+    cachedGoogleMobileAdsSdk = null;
+  }
+  return cachedGoogleMobileAdsSdk;
+}
 
 const INTERSTITIAL_COOLDOWN_MS = 180_000;
 
@@ -49,8 +58,7 @@ function configuredUnitId(kind: 'rewarded' | 'interstitial', sdk: GoogleMobileAd
   return null;
 }
 
-function NativeRewardedAdProvider({ children }: PropsWithChildren) {
-  const sdk = googleMobileAdsSdk!;
+function NativeRewardedAdProvider({ children, sdk }: PropsWithChildren<{ sdk: GoogleMobileAdsSdk }>) {
 
   const {
     default: mobileAds,
@@ -303,8 +311,9 @@ function SimulatedRewardedAdProvider({ children }: PropsWithChildren) {
 }
 
 export function RewardedAdProvider({ children }: PropsWithChildren) {
-  if (IS_EXPO_GO) return <SimulatedRewardedAdProvider>{children}</SimulatedRewardedAdProvider>;
-  return <NativeRewardedAdProvider>{children}</NativeRewardedAdProvider>;
+  const sdk = getGoogleMobileAdsSdk();
+  if (!sdk) return <SimulatedRewardedAdProvider>{children}</SimulatedRewardedAdProvider>;
+  return <NativeRewardedAdProvider sdk={sdk}>{children}</NativeRewardedAdProvider>;
 }
 
 export function useRewardedAd(): AdContextValue {

@@ -182,6 +182,18 @@ function transformFullRect(rect) {
   };
 }
 
+function ethnicityFacePlacement(base, column) {
+  const fit = layout.ethnicityFaceFits?.[column] ?? { scaleX: 1, scaleY: 1, offsetY: 0 };
+  const width = base.width * fit.scaleX;
+  const height = base.height * fit.scaleY;
+  return {
+    x: base.x + (base.width - width) / 2,
+    y: base.y + (base.height - height) / 2 + fit.offsetY * (base.width / layout.headPlacement.width),
+    width,
+    height,
+  };
+}
+
 function buildHeadAtlases() {
   for (let skin = 0; skin < 6; skin += 1) {
     const source = read(`head_atlas_v3_skin_${skin}.png`);
@@ -219,17 +231,18 @@ function buildHeadAtlases() {
             neckHalfWidth: 57,
             feather: 3,
           });
-        drawScaled(source, sourceRect, portrait, layout.headPlacement, column * CELL, row * CELL, portraitHeadMask);
+        const portraitFacePlacement = ethnicityFacePlacement(layout.headPlacement, column);
+        drawScaled(source, sourceRect, portrait, portraitFacePlacement, column * CELL, row * CELL, portraitHeadMask);
         // The head atlas already contains the matching illustrated neck and
         // upper chest. Extract that original artwork behind the front collar
         // instead of substituting an independently generated neck asset.
-        drawScaled(source, sourceRect, portraitNeck, layout.headPlacement, column * CELL, row * CELL, softNeckMask({
+        drawScaled(source, sourceRect, portraitNeck, portraitFacePlacement, column * CELL, row * CELL, softNeckMask({
           centerX: genderAnchors.headCenterX,
           ...portraitNeckFit,
         }));
         const bodyPlacement = layout.fullBodyPlacement[gender];
         const headPlacement = layout.fullHeadPlacement[gender];
-        const alignedHead = { ...headPlacement, y: headPlacement.y + bodyPlacement.y };
+        const alignedHead = ethnicityFacePlacement({ ...headPlacement, y: headPlacement.y + bodyPlacement.y }, column);
         const fullDestination = transformFullRect(alignedHead);
         drawScaled(source, sourceRect, full, fullDestination, column * CELL, row * FULL_HEIGHT, headForegroundMask({
           centerX: layout.fullBodyAnchors.chin.x,

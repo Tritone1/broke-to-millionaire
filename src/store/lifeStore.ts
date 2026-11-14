@@ -4,8 +4,9 @@ import { COURSES, type SkillName } from '../data/courses';
 import { normalizeHairstyleForGender, normalizeSkinTone } from '../data/avatarOptions';
 import { COMPANY_TYPES, companyTypeById } from '../data/companyTypes';
 import { createDatingCandidate, type DatingCandidate } from '../data/dating';
+import type { Language } from '../data/i18n';
 import { CONSUMER_GOODS, consumerGoodById } from '../data/goods';
-import { JOBS, jobById, skillsAfterJobMonth } from '../data/jobs';
+import { JOBS, JOB_SKILL_GROWTH, jobById } from '../data/jobs';
 import { MARKET_ASSETS } from '../data/marketAssets';
 import { LIFE_EVENTS, lifeEventById } from '../data/lifeEvents';
 import { FOOD_PLANS, HEALTH_PLANS, housingById, vehicleById, type BackgroundId, type EthnicityId, type TraitId } from '../data/living';
@@ -28,13 +29,14 @@ import {
   OFFLINE_CAP_SECONDS,
   OFFLINE_SALARY_MONTHS,
 } from '../game/config';
-import { examSuccessChance, interviewSuccessChance, studyGain } from '../game/education';
+import { examSuccessChance, interviewSuccessChance } from '../game/education';
+import { activeStudyGain, courseProgress, STUDY_SESSION_ENERGY, type ActiveCourseProgress } from '../game/courseProgress';
 import { legacyMultiplier, prestigePointsForLifetime } from '../game/formulas';
-import { annualFeesAndRepairs, calculateMonthlyBills, careerOperatingCost, costOfLivingMultiplier, divorceSplit, mortgagePayment, nextRelationshipStage, progressiveMonthlyTax, type BillLine, type RelationshipStage } from '../game/lifeCosts';
+import { annualFeesAndRepairs, calculateMonthlyBills, careerOperatingCost, costOfLivingMultiplier, divorceSplit, mortgagePayment, nextRelationshipStage, progressiveMonthlyTax, progressiveWealthUpkeep, type BillLine, type RelationshipStage } from '../game/lifeCosts';
 import { advanceMarket, averagePriceAfterBuy, createMarketSnapshot, type MarketNews } from '../game/marketEngine';
 import { nextRandom } from '../game/random';
 
-export const LIFE_SAVE_VERSION = 12;
+export const LIFE_SAVE_VERSION = 15;
 export const BROKER_FEE = 0.005;
 
 export type Skills = Record<SkillName, number>;
@@ -57,7 +59,7 @@ export type PortfolioPosition = { quantity: number; averageBuyPrice: number };
 export type LimitOrder = { id: string; assetId: string; side: 'buy' | 'sell'; quantity: number; targetPrice: number };
 export type LifeEventKind = 'windfall' | 'tax' | 'medical' | 'fired' | 'marketCrash' | 'business' | 'breakdown' | 'bill' | 'invitation' | 'birthday' | 'promotionParty';
 export type LifeEvent = { id: string; kind: LifeEventKind; title: string; description: string; eventId?: string };
-export type LifeSettings = { sound: boolean; haptics: boolean; language: 'en' };
+export type LifeSettings = { sound: boolean; haptics: boolean; language: Language; languageChosen: boolean };
 export type DailyProgress = { date: string; workTaps: number; trades: number; businessActions: number };
 export type CasinoStats = { totalWagered: number; totalWon: number; gamesPlayed: number };
 export type Gender = 'male' | 'female' | 'non-binary';
@@ -72,7 +74,16 @@ export type CharacterProfile = {
 };
 export type HousingState = { id: string; tenure: 'homeless' | 'rent' | 'owned' | 'mortgage'; purchasePrice: number; marketValue: number; mortgageBalance: number; monthlyPayment: number };
 export type VehicleState = { id: string; tenure: 'walk' | 'public' | 'owned' | 'lease' | 'finance'; purchasePrice: number; marketValue: number; debt: number; monthlyPayment: number; monthsOwned: number; condition: number };
-export type PartnerState = Omit<DatingCandidate, 'id'> & { stage: Exclude<RelationshipStage, 'single'>; affection: number; monthsTogether: number; stayAtHome: boolean };
+export type PartnerCareAction = 'talk' | 'date' | 'gift' | 'weekend' | 'vacation' | 'family';
+export type PartnerState = Omit<DatingCandidate, 'id' | 'age'> & {
+  birthMonth: number;
+  stage: Exclude<RelationshipStage, 'single'>;
+  affection: number;
+  happiness: number;
+  monthsTogether: number;
+  stayAtHome: boolean;
+  careMonths: Partial<Record<PartnerCareAction, number>>;
+};
 export type ChildState = { id: string; name: string; birthMonth: number; happiness: number; education: number; privateSchool: boolean; collegeFund: number };
 export type BankLoan = { id: string; originalAmount: number; balance: number; annualRate: number; monthlyPayment: number; monthsRemaining: number };
 export type MonthlyBudget = { month: number; income: number; expenses: number; unpaid: number; lines: BillLine[] };
@@ -122,9 +133,10 @@ export type LifePersistedState = {
   monthLengthSeconds: number;
   skills: Skills;
   completedCourses: string[];
-  activeCourse: { courseId: string; endsAt: number; studyProgress: number; examReady: boolean; examAttempts: number } | null;
+  activeCourse: ActiveCourseProgress | null;
   jobId: string | null;
   jobExperienceMonths: Record<string, number>;
+  jobSkillMilestones: Record<string, number>;
   performance: number;
   promotionLevel: number;
   energy: number;
@@ -194,6 +206,7 @@ type LifeStore = LifePersistedState & {
   performWellnessAction: (actionId: WellnessActionId) => boolean;
   startCourse: (courseId: string) => boolean;
   finishCourseNow: () => void;
+  fastForwardCourseMonth: () => boolean;
   studyActiveCourse: () => boolean;
   takeCourseExam: () => 'passed' | 'failed' | 'unavailable';
   takeJob: (jobId: string) => boolean;
@@ -236,7 +249,7 @@ type LifeStore = LifePersistedState & {
   meetPartner: () => void;
   acceptDatingCandidate: () => boolean;
   skipDatingCandidate: () => void;
-  relationshipAction: (action: 'date' | 'gift' | 'propose' | 'marry' | 'breakup' | 'divorce') => boolean;
+  relationshipAction: (action: PartnerCareAction | 'propose' | 'marry' | 'breakup' | 'divorce') => boolean;
   haveChild: () => boolean;
   toggleNanny: () => void;
   togglePrivateSchool: (childId: string) => void;
@@ -278,6 +291,7 @@ export function createInitialLifeState(now = Date.now()): LifePersistedState {
     activeCourse: null,
     jobId: null,
     jobExperienceMonths: {},
+    jobSkillMilestones: {},
     performance: 0,
     promotionLevel: 0,
     energy: 100,
@@ -323,7 +337,7 @@ export function createInitialLifeState(now = Date.now()): LifePersistedState {
     dailyStreak: 0,
     lastDailyClaim: null,
     claimedAchievements: [],
-    settings: { sound: true, haptics: true, language: 'en' },
+    settings: { sound: true, haptics: true, language: 'en', languageChosen: false },
     lastSeenTimestamp: now,
     lastSavedAt: now,
     nextLifeEventAt: futureEvent(now),
@@ -338,21 +352,45 @@ export function jobSalaryPerSecond(state: Pick<LifePersistedState, 'jobId' | 'pr
   return job.salaryPerSecond * (1 + Math.min(MAX_PROMOTION_LEVEL, state.promotionLevel) * 0.125) * fatigueMultiplier * legacyMultiplier(state.legacyPoints);
 }
 
-export function companyProfitPerSecond(company: PlayerCompany, legacyPoints = 0): number {
+export function companyUpgradeCost(company: PlayerCompany, kind: keyof CompanyUpgrades): number {
   const definition = companyTypeById(company.typeId);
-  const productivity = company.employees.reduce((sum, employee) => sum + employee.productivity, 0);
-  const employeeMultiplier = 1 + productivity / 500;
-  const upgradeMultiplier = 1 + (company.upgrades.marketing + company.upgrades.equipment + company.upgrades.location) * 0.2;
-  const reputationMultiplier = 0.7 + company.reputation / 100;
-  const boostMultiplier = company.boostUntil > Date.now() ? 1.5 : 1;
-  const gross = definition.baseRevenuePerSecond * company.level * employeeMultiplier * upgradeMultiplier * reputationMultiplier * boostMultiplier;
-  const expenses = company.employees.reduce((sum, employee) => sum + employee.salaryPerSecond, 0);
-  return Math.max(0, (gross - expenses) * company.ownership * legacyMultiplier(legacyPoints));
+  return definition.startupCost * 0.3 * 2 ** company.upgrades[kind];
+}
+
+export function companyHiringCost(company: PlayerCompany): number {
+  const definition = companyTypeById(company.typeId);
+  const monthlyBaseSalary = definition.employeeBaseSalary * GAME_MONTH_SECONDS;
+  return monthlyBaseSalary * 6 * (1 + company.employees.length / 10) ** 1.25;
+}
+
+function companyNetOperatingPerSecond(company: PlayerCompany, legacyPoints = 0, now = Date.now()): number {
+  const definition = companyTypeById(company.typeId);
+  const productivityUnits = company.employees.reduce((sum, employee) => sum + employee.productivity / 100, 0);
+  const workforceMultiplier = 1 + Math.log2(1 + productivityUnits) * 0.45;
+  const totalUpgrades = company.upgrades.marketing + company.upgrades.equipment + company.upgrades.location;
+  const upgradeMultiplier = 1.12 ** Math.min(60, totalUpgrades);
+  const reputationMultiplier = 0.75 + Math.max(5, Math.min(100, company.reputation)) / 200;
+  const boostMultiplier = company.boostUntil > now ? 1.5 : 1;
+  const gross = definition.baseRevenuePerSecond * workforceMultiplier * upgradeMultiplier * reputationMultiplier * boostMultiplier;
+  const payroll = company.employees.reduce((sum, employee) => sum + employee.salaryPerSecond, 0);
+  const fixedOperations = definition.baseRevenuePerSecond * 0.55 * (1 + Math.sqrt(totalUpgrades) * 0.15) * (company.manager ? 0.9 : 1);
+  return (gross - payroll - fixedOperations) * company.ownership * legacyMultiplier(legacyPoints);
+}
+
+export function companyProfitPerSecond(company: PlayerCompany, legacyPoints = 0, now = Date.now()): number {
+  return Math.max(0, companyNetOperatingPerSecond(company, legacyPoints, now));
+}
+
+export function companyOperatingLossPerSecond(company: PlayerCompany, legacyPoints = 0, now = Date.now()): number {
+  return Math.max(0, -companyNetOperatingPerSecond(company, legacyPoints, now));
 }
 
 export function companyValuation(company: PlayerCompany): number {
   const definition = companyTypeById(company.typeId);
-  return definition.startupCost * company.level * (1 + company.employees.length * 0.18) * (1 + company.reputation / 120);
+  const upgradeCapital = (Object.values(company.upgrades) as number[]).reduce((sum, level) => sum + definition.startupCost * 0.3 * (2 ** level - 1), 0);
+  const hiringCapital = company.employees.reduce((sum, employee) => sum + employee.salaryPerSecond * GAME_MONTH_SECONDS * 6, 0);
+  const stableMonthlyProfit = companyProfitPerSecond(company, 0, Number.POSITIVE_INFINITY) * GAME_MONTH_SECONDS;
+  return definition.startupCost * 0.65 + upgradeCapital * 0.55 + hiringCapital * 0.35 + stableMonthlyProfit * 4;
 }
 
 type IncomeState = Pick<LifePersistedState, 'jobId' | 'promotionLevel' | 'energy' | 'legacyPoints' | 'companies' | 'ownedLifestyle' | 'partner' | 'character' | 'monthLengthSeconds'>;
@@ -382,6 +420,10 @@ export function calculateLifeNetWorth(state: Pick<LifePersistedState, 'money' | 
   const vehicleEquity = Math.max(0, state.vehicle.marketValue - state.vehicle.debt);
   const loanDebt = state.loans.reduce((sum, loan) => sum + loan.balance, 0);
   return add(state.money, portfolioValue + companyValue + lifestyleValue + goodsValue + propertyEquity + vehicleEquity - loanDebt);
+}
+
+export function partnerAgeAtMonth(partner: Pick<PartnerState, 'birthMonth'>, gameMonth: number): number {
+  return Math.max(18, Math.floor((gameMonth - partner.birthMonth) / 12));
 }
 
 export function hasBusinessAccess(state: LifePersistedState): boolean {
@@ -458,11 +500,11 @@ function courseCompletedPatch(state: LifePersistedState): Partial<LifePersistedS
 
 function courseReadyPatch(state: LifePersistedState): Partial<LifePersistedState> {
   if (!state.activeCourse) return {};
+  const course = COURSES.find((item) => item.id === state.activeCourse?.courseId);
+  if (!course || !courseProgress(state.activeCourse, course, state.gameMonth).readyToGraduate) return {};
   return {
     activeCourse: {
       ...state.activeCourse,
-      endsAt: Date.now(),
-      studyProgress: Math.max(60, state.activeCourse.studyProgress),
       examReady: true,
     },
   };
@@ -574,6 +616,10 @@ export function monthlyBillsFor(state: LifePersistedState) {
   if (tax > 0) lines.push({ id: 'income-tax', label: 'Income tax', amount: tax });
   const workCosts = careerOperatingCost(income.salary, jobById(state.jobId)?.rank ?? 0);
   if (workCosts > 0) lines.push({ id: 'career-costs', label: 'Work travel & career costs', amount: workCosts });
+  const companyLosses = state.companies.reduce((sum, company) => sum + companyOperatingLossPerSecond(company, state.legacyPoints), 0) * state.monthLengthSeconds;
+  if (companyLosses > 0) lines.push({ id: 'company-losses', label: 'Company operating losses', amount: companyLosses });
+  const wealthUpkeep = progressiveWealthUpkeep(toNumber(calculateLifeNetWorth(state)));
+  if (wealthUpkeep > 0) lines.push({ id: 'wealth-upkeep', label: 'Wealth management & asset tax', amount: wealthUpkeep });
   const regularTotal = lines.reduce((sum, line) => sum + line.amount, 0);
   const annualCosts = annualFeesAndRepairs(state.gameMonth, income.total, regularTotal);
   if (annualCosts > 0) lines.push({ id: 'annual-costs', label: 'Annual fees & repairs', amount: annualCosts });
@@ -601,15 +647,21 @@ export function processGameMonth(state: LifePersistedState): Partial<LifePersist
   if (missedPayments >= 2 && housing.id !== 'homeless') housing = { id: 'homeless', tenure: 'homeless', purchasePrice: 0, marketValue: 0, mortgageBalance: 0, monthlyPayment: 0 };
   if (missedPayments >= 3 && (vehicle.tenure === 'lease' || vehicle.tenure === 'finance')) vehicle = { id: 'walk', tenure: 'walk', purchasePrice: 0, marketValue: 0, debt: 0, monthlyPayment: 0, monthsOwned: 0, condition: 100 };
   const loans = state.loans.map((loan) => ({ ...loan, balance: Math.max(0, loan.balance - Math.max(0, loan.monthlyPayment - loan.balance * loan.annualRate / 12)), monthsRemaining: Math.max(0, loan.monthsRemaining - 1) })).filter((loan) => loan.balance > 0.01);
-  const partner = state.partner ? { ...state.partner, monthsTogether: state.partner.monthsTogether + 1, affection: Math.max(0, state.partner.affection - (canPay ? 0 : 3)) } : null;
   const home = housingById(housing.id);
-  const familySize = 1 + (partner ? 1 : 0) + state.children.length;
+  const familySize = 1 + (state.partner ? 1 : 0) + state.children.length;
   const overcrowding = Math.max(0, familySize - home.capacity) * 7;
+  const partner = state.partner ? {
+    ...state.partner,
+    monthsTogether: state.partner.monthsTogether + 1,
+    happiness: Math.max(0, Math.min(100, state.partner.happiness - 2 - overcrowding / 3 - (canPay ? 0 : 8) + (state.happiness >= 75 ? 1 : 0))),
+    affection: Math.max(0, Math.min(100, state.partner.affection + (state.partner.happiness >= 75 ? 1 : -1) - (canPay ? 0 : 3))),
+  } : null;
   const food = FOOD_PLANS.find((item) => item.id === state.foodPlanId) ?? FOOD_PLANS[0];
   const healthcare = HEALTH_PLANS.find((item) => item.id === state.healthPlanId) ?? HEALTH_PLANS[0];
   const children = state.children.map((child) => ({ ...child, happiness: Math.max(0, Math.min(100, child.happiness + (canPay ? 1 : -4) - overcrowding / 4)), education: Math.min(100, child.education + (child.privateSchool ? 2 : 1)) }));
   const familyAverage = children.length > 0 ? children.reduce((sum, child) => sum + child.happiness, 0) / children.length : 70;
-  const happiness = Math.max(0, Math.min(100, state.happiness + food.happiness + home.comfort / 25 + (partner ? partner.affection / 50 : 0) + familyAverage / 70 - 5 - overcrowding - (canPay ? 0 : 12)));
+  const partnerSupport = partner ? (partner.affection + partner.happiness) / 100 : 0;
+  const happiness = Math.max(0, Math.min(100, state.happiness + food.happiness + home.comfort / 25 + partnerSupport + familyAverage / 70 - 5 - overcrowding - (canPay ? 0 : 12)));
   const exhaustionPenalty = state.energy < 20 ? 2 : state.energy < 40 ? 1 : 0;
   const stressPenalty = state.stress >= 80 ? 2 : state.stress >= 60 ? 1 : 0;
   const health = Math.max(0, Math.min(100, state.health + healthcare.health + food.health - 1 - exhaustionPenalty - stressPenalty));
@@ -618,7 +670,22 @@ export function processGameMonth(state: LifePersistedState): Partial<LifePersist
     ? { ...state.jobExperienceMonths, [state.jobId]: (state.jobExperienceMonths[state.jobId] ?? 0) + 1 }
     : state.jobExperienceMonths;
   const currentJobMonths = state.jobId ? jobExperienceMonths[state.jobId] ?? 0 : 0;
-  const skills = skillsAfterJobMonth(state.skills, state.jobId, currentJobMonths);
+  const jobSkillMilestones = { ...state.jobSkillMilestones };
+  const skills = { ...state.skills };
+  if (state.jobId) {
+    const growth = JOB_SKILL_GROWTH[state.jobId];
+    if (growth) {
+      const awardedMilestones = jobSkillMilestones[state.jobId] ?? 0;
+      const earnedMilestones = Math.floor(currentJobMonths / growth.intervalMonths);
+      const pendingMilestones = Math.max(0, earnedMilestones - awardedMilestones);
+      if (pendingMilestones > 0) {
+        for (const [skill, amount] of Object.entries(growth.rewards) as [SkillName, number][]) {
+          skills[skill] += amount * pendingMilestones;
+        }
+        jobSkillMilestones[state.jobId] = earnedMilestones;
+      }
+    }
+  }
   const promotionEligible = !!state.jobId
     && state.promotionLevel < MAX_PROMOTION_LEVEL
     && currentJobMonths >= (state.promotionLevel + 1) * 3
@@ -644,6 +711,7 @@ export function processGameMonth(state: LifePersistedState): Partial<LifePersist
     health,
     energy: Math.max(0, Math.min(100, state.energy + (state.nanny || children.length === 0 ? 3 : -children.length * 2))),
     jobExperienceMonths,
+    jobSkillMilestones,
     skills,
     promotionLevel,
     performance: promotionEligible ? 0 : state.performance,
@@ -765,12 +833,7 @@ export function simulateOfflineProgress(saved: LifePersistedState, now: number):
     }
   }
 
-  const ignoredMilliseconds = Math.max(0, rawAwayMilliseconds - countedSeconds * 1_000);
-  if (state.activeCourse) {
-    const activeCourse = { ...state.activeCourse, endsAt: state.activeCourse.endsAt + ignoredMilliseconds };
-    state = { ...state, activeCourse };
-    if (activeCourse.endsAt <= now) state = { ...state, ...courseReadyPatch(state) };
-  }
+  if (state.activeCourse) state = { ...state, ...courseReadyPatch(state) };
 
   let netPositive = zero();
   let cashLoss = zero();
@@ -837,12 +900,7 @@ export const useLifeStore = create<LifeStore>((set, get) => ({
     if (!state.hydrated) return;
     const rawSeconds = Math.max(0, Math.min(5, elapsedMilliseconds / 1_000));
     if (state.timeSpeed === 0) {
-      set({
-        runtimeNow: now,
-        activeCourse: state.activeCourse && !state.activeCourse.examReady
-          ? { ...state.activeCourse, endsAt: state.activeCourse.endsAt + rawSeconds * 1_000 }
-          : state.activeCourse,
-      });
+      set({ runtimeNow: now });
       return;
     }
     const seconds = rawSeconds * state.timeSpeed;
@@ -854,10 +912,6 @@ export const useLifeStore = create<LifeStore>((set, get) => ({
     const workDrain = state.character.traits.includes('hard-worker') ? 0.009 : 0.012;
     const nextEnergy = hasJob ? Math.max(0, state.energy - seconds * workDrain) : Math.min(100, state.energy + seconds * 0.018);
     const nextStress = hasJob ? Math.min(100, state.stress + seconds * 0.006) : Math.max(0, state.stress - seconds * 0.012);
-    const adjustedCourse = state.activeCourse && !state.activeCourse.examReady
-      ? { ...state.activeCourse, endsAt: state.activeCourse.endsAt - rawSeconds * (state.timeSpeed - 1) * 1_000 }
-      : state.activeCourse;
-    const courseFinished = !!adjustedCourse && !adjustedCourse.examReady && adjustedCourse.endsAt <= now;
     const shouldMarketTick = now - state.lastMarketTick >= 2_000;
     const market = shouldMarketTick
       ? advanceMarket({ prices: state.marketPrices, trends: state.marketTrends, history: state.marketHistory, seed: state.marketSeed, news: state.marketNews }, now)
@@ -878,12 +932,11 @@ export const useLifeStore = create<LifeStore>((set, get) => ({
       totalPlaySeconds,
       monthProgressSeconds: monthDue ? monthProgress - state.monthLengthSeconds : monthProgress,
       runtimeNow: now,
-      activeCourse: adjustedCourse,
+      activeCourse: state.activeCourse,
       activeLifeEvent: eventDue ? createLifeEvent(now, state.marketSeed, state.health, state.stress) : state.activeLifeEvent,
       nextLifeEventAt: eventDue ? futureEvent(now) : state.nextLifeEventAt,
       lastDividendAt: dividendDue ? now : state.lastDividendAt,
     };
-    if (courseFinished) Object.assign(nextBase, courseReadyPatch({ ...state, activeCourse: adjustedCourse }), { celebrationNonce: state.celebrationNonce + 1 });
     if (market) Object.assign(nextBase, {
       marketPrices: market.prices,
       marketTrends: market.trends,
@@ -901,10 +954,13 @@ export const useLifeStore = create<LifeStore>((set, get) => ({
       const month = beforeMonth.gameMonth + 1;
       const processed = processGameMonth(beforeMonth);
       const promoted = (processed.promotionLevel ?? beforeMonth.promotionLevel) > beforeMonth.promotionLevel;
+      const afterMonth = { ...beforeMonth, ...processed } as LifePersistedState;
+      const readyPatch = courseReadyPatch(afterMonth);
       set({
         ...processed,
+        ...readyPatch,
         monthlySummary: { month, income: incomeForMonth, expenses, unpaid: Math.max(0, expenses - toNumber(beforeMonth.money)), lines: bills.lines, net: incomeForMonth - expenses, birthday: month % 12 === 0, promotion: promoted },
-        celebrationNonce: month % 12 === 0 || promoted ? beforeMonth.celebrationNonce + 1 : beforeMonth.celebrationNonce,
+        celebrationNonce: month % 12 === 0 || promoted || Object.keys(readyPatch).length > 0 ? beforeMonth.celebrationNonce + 1 : beforeMonth.celebrationNonce,
       });
     }
     if (market && state.limitOrders.length > 0) set(processLimitOrders(get()));
@@ -959,38 +1015,49 @@ export const useLifeStore = create<LifeStore>((set, get) => ({
     const foodLevel = Math.max(0, FOOD_PLANS.findIndex((plan) => plan.id === state.foodPlanId));
     const vehicleStatus = vehicleById(state.vehicle.id).status;
     if (housingStatus < course.living.housingStatus || foodLevel < course.living.foodLevel || vehicleStatus < course.living.vehicleStatus) return false;
-    const monthlySurplus = totalIncomePerSecond(state) * state.monthLengthSeconds - monthlyBillsFor(state).total - state.lateFees;
-    if (course.monthlyTuition > 0 && monthlySurplus < course.monthlyTuition) return false;
-    const durationMultiplier = state.character.traits.includes('genius') ? 0.8 : 1;
-    set({ money: subtract(state.money, course.cost), totalSpent: add(state.totalSpent, course.cost), energy: state.energy - 10, activeCourse: { courseId, endsAt: Date.now() + course.durationSeconds * durationMultiplier * 1_000, studyProgress: 10, examReady: false, examAttempts: 0 }, tutorialStep: 3 });
+    set({ money: subtract(state.money, course.cost), totalSpent: add(state.totalSpent, course.cost), energy: state.energy - 10, activeCourse: { courseId, enrolledMonth: state.gameMonth, activeProgress: 0, examReady: false, examAttempts: 0 }, tutorialStep: 3 });
     return true;
   },
   finishCourseNow: () => {
     const state = get();
     if (!state.activeCourse) return;
-    set({ ...courseReadyPatch(state), celebrationNonce: state.celebrationNonce + 1 });
+    set({ ...courseReadyPatch(state) });
+  },
+  fastForwardCourseMonth: () => {
+    const state = get();
+    const activeCourse = state.activeCourse;
+    if (!activeCourse || activeCourse.examReady) return false;
+    const course = COURSES.find((item) => item.id === activeCourse.courseId);
+    if (!course) return false;
+    const gain = Math.min(5, 50 - activeCourse.activeProgress);
+    if (gain <= 0) return false;
+    const nextActive = { ...activeCourse, activeProgress: activeCourse.activeProgress + gain };
+    set({ activeCourse: nextActive, ...courseReadyPatch({ ...state, activeCourse: nextActive }) });
+    return true;
   },
   studyActiveCourse: () => {
     const state = get();
-    if (!state.activeCourse || state.energy < 8) return false;
-    const gain = studyGain(state.skills.intelligence, state.energy);
-    set({ activeCourse: { ...state.activeCourse, studyProgress: Math.min(100, state.activeCourse.studyProgress + gain) }, energy: state.energy - 8, stress: Math.min(100, state.stress + 2) });
+    if (!state.activeCourse || state.energy < STUDY_SESSION_ENERGY || state.activeCourse.activeProgress >= 50) return false;
+    const gain = activeStudyGain(state.skills.intelligence, state.energy);
+    const nextActive = { ...state.activeCourse, activeProgress: Math.min(50, state.activeCourse.activeProgress + gain) };
+    set({ activeCourse: nextActive, ...courseReadyPatch({ ...state, activeCourse: nextActive }), energy: state.energy - STUDY_SESSION_ENERGY, stress: Math.min(100, state.stress + 2) });
     return true;
   },
   takeCourseExam: () => {
     const state = get();
     const active = state.activeCourse;
     const course = COURSES.find((item) => item.id === active?.courseId);
-    if (!active || !course || !active.examReady || active.studyProgress < 40 || state.energy < 8) return 'unavailable';
+    const progress = active && course ? courseProgress(active, course, state.gameMonth) : null;
+    if (!active || !course || !active.examReady || !progress?.readyToGraduate || state.energy < STUDY_SESSION_ENERGY) return 'unavailable';
     const retakeCost = active.examAttempts > 0 ? course.retakeFee : 0;
     if (compare(state.money, retakeCost) < 0) return 'unavailable';
     const random = nextRandom({ seed: state.marketSeed + active.examAttempts + state.gameMonth });
-    const passed = random.value <= examSuccessChance({ intelligence: state.skills.intelligence, studyProgress: active.studyProgress, health: state.health, happiness: state.happiness, attempts: active.examAttempts });
+    const passed = random.value <= examSuccessChance({ intelligence: state.skills.intelligence, studyProgress: progress.totalProgress, health: state.health, happiness: state.happiness, attempts: active.examAttempts });
     if (passed) {
       set({ ...courseCompletedPatch(state), money: subtract(state.money, retakeCost), totalSpent: add(state.totalSpent, retakeCost), marketSeed: random.next.seed, gems: state.gems + 1, reputation: state.reputation + 2, celebrationNonce: state.celebrationNonce + 1 });
       return 'passed';
     }
-    set({ money: subtract(state.money, retakeCost), totalSpent: add(state.totalSpent, retakeCost), energy: state.energy - 8, marketSeed: random.next.seed, activeCourse: { ...active, examAttempts: active.examAttempts + 1, studyProgress: Math.max(25, active.studyProgress - 15) } });
+    set({ money: subtract(state.money, retakeCost), totalSpent: add(state.totalSpent, retakeCost), energy: state.energy - STUDY_SESSION_ENERGY, marketSeed: random.next.seed, activeCourse: { ...active, examAttempts: active.examAttempts + 1, activeProgress: Math.max(25, active.activeProgress - 15), examReady: false } });
     return 'failed';
   },
   takeJob: (jobId) => {
@@ -1033,7 +1100,7 @@ export const useLifeStore = create<LifeStore>((set, get) => ({
     const company = state.companies.find((item) => item.id === companyId);
     if (!company) return false;
     const definition = companyTypeById(company.typeId);
-    const hiringCost = definition.employeeBaseSalary * 300;
+    const hiringCost = companyHiringCost(company);
     if (compare(state.money, hiringCost) < 0) return false;
     const random = nextRandom({ seed: state.marketSeed + company.employees.length + Date.now() });
     const employee: Employee = { id: `employee-${Date.now()}-${company.employees.length}`, name: EMPLOYEE_NAMES[Math.floor(random.value * EMPLOYEE_NAMES.length)] ?? 'Taylor', salaryPerSecond: definition.employeeBaseSalary * (0.9 + random.value * 0.4), productivity: Math.round(70 + random.value * 50) };
@@ -1051,8 +1118,7 @@ export const useLifeStore = create<LifeStore>((set, get) => ({
     const state = get();
     const company = state.companies.find((item) => item.id === companyId);
     if (!company) return false;
-    const definition = companyTypeById(company.typeId);
-    const cost = definition.startupCost * 0.3 * 2 ** company.upgrades[kind];
+    const cost = companyUpgradeCost(company, kind);
     if (compare(state.money, cost) < 0) return false;
     set({ money: subtract(state.money, cost), totalSpent: add(state.totalSpent, cost), companies: state.companies.map((item) => item.id === companyId ? { ...item, upgrades: { ...item.upgrades, [kind]: item.upgrades[kind] + 1 }, level: item.level + 1, reputation: Math.min(100, item.reputation + 3) } : item) });
     return true;
@@ -1066,7 +1132,7 @@ export const useLifeStore = create<LifeStore>((set, get) => ({
     set({ money: subtract(state.money, cost), totalSpent: add(state.totalSpent, cost), companies: state.companies.map((item) => item.id === companyId ? { ...item, manager: true } : item) });
     return true;
   },
-  boostCompany: (companyId) => set((state) => ({ companies: state.companies.map((item) => item.id === companyId ? { ...item, boostUntil: Date.now() + 30_000, reputation: Math.min(100, item.reputation + 0.5) } : item) })),
+  boostCompany: (companyId) => set((state) => state.energy < 8 ? state : ({ energy: state.energy - 8, companies: state.companies.map((item) => item.id === companyId ? { ...item, boostUntil: Date.now() + 30_000, reputation: Math.min(100, item.reputation + 0.5) } : item) })),
   sellCompany: (companyId) => {
     const state = get();
     const company = state.companies.find((item) => item.id === companyId);
@@ -1358,8 +1424,21 @@ export const useLifeStore = create<LifeStore>((set, get) => ({
     const state = get();
     const candidate = state.datingCandidate;
     if (!candidate || state.partner) return false;
-    const { id: _id, ...profile } = candidate;
-    set({ partner: { ...profile, stage: 'dating', affection: 42, monthsTogether: 0, stayAtHome: false }, datingCandidate: null, happiness: Math.min(100, state.happiness + 2) });
+    const { id: _id, age, ...profile } = candidate;
+    set({
+      partner: {
+        ...profile,
+        birthMonth: state.gameMonth - age * 12,
+        stage: 'dating',
+        affection: 42,
+        happiness: 70,
+        monthsTogether: 0,
+        stayAtHome: false,
+        careMonths: {},
+      },
+      datingCandidate: null,
+      happiness: Math.min(100, state.happiness + 2),
+    });
     return true;
   },
   skipDatingCandidate: () => {
@@ -1373,11 +1452,32 @@ export const useLifeStore = create<LifeStore>((set, get) => ({
     const partner = state.partner;
     if (!partner) return false;
     const charm = state.character.traits.includes('charming') ? 1.25 : 1;
-    if (action === 'date' || action === 'gift') {
-      const cost = action === 'date' ? 120 : 600;
+    if (action === 'talk' || action === 'date' || action === 'gift' || action === 'weekend' || action === 'vacation' || action === 'family') {
+      if (partner.careMonths[action] === state.gameMonth) return false;
+      const effects: Record<PartnerCareAction, { cost: number; affection: number; partnerHappiness: number; playerHappiness: number; stress: number }> = {
+        talk: { cost: 0, affection: 2, partnerHappiness: 4, playerHappiness: 1, stress: 1 },
+        date: { cost: 120, affection: 7, partnerHappiness: 8, playerHappiness: 3, stress: 2 },
+        gift: { cost: 600, affection: 10, partnerHappiness: 12, playerHappiness: 2, stress: 0 },
+        weekend: { cost: 1_500, affection: 12, partnerHappiness: 18, playerHappiness: 5, stress: 6 },
+        vacation: { cost: 5_000, affection: 16, partnerHappiness: 28, playerHappiness: 10, stress: 12 },
+        family: { cost: 800, affection: 5, partnerHappiness: 12, playerHappiness: 5, stress: 3 },
+      };
+      const effect = effects[action];
+      const cost = effect.cost;
       if (compare(state.money, cost) < 0) return false;
-      const affection = Math.min(100, partner.affection + (action === 'date' ? 8 : 13) * charm);
-      set({ money: subtract(state.money, cost), totalSpent: add(state.totalSpent, cost), partner: { ...partner, affection }, happiness: Math.min(100, state.happiness + 3) });
+      set({
+        money: subtract(state.money, cost),
+        totalSpent: add(state.totalSpent, cost),
+        partner: {
+          ...partner,
+          affection: Math.min(100, partner.affection + effect.affection * charm),
+          happiness: Math.min(100, partner.happiness + effect.partnerHappiness),
+          careMonths: { ...partner.careMonths, [action]: state.gameMonth },
+        },
+        children: action === 'family' ? state.children.map((child) => ({ ...child, happiness: Math.min(100, child.happiness + 12) })) : state.children,
+        happiness: Math.min(100, state.happiness + effect.playerHappiness),
+        stress: Math.max(0, state.stress - effect.stress),
+      });
       return true;
     }
     if (action === 'propose') {

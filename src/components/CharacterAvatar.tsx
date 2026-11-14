@@ -9,7 +9,7 @@ export const CharacterAvatar = memo(function CharacterAvatar({ character, size =
   const hairIndex = normalizeHairstyleForGender(character.avatar.hairStyle, character.gender);
   return (
     <View accessibilityLabel={`${character.name} avatar, ${HAIRSTYLES[hairIndex]} hairstyle`} style={[styles.shell, { width: size, height: size, borderRadius: size / 2, borderColor: character.avatar.skin }]}>
-      <CharacterHead character={character} style={{ width: size - 6, height: size - 6 }} />
+      <CharacterHead character={character} portraitCrop="tight" style={{ width: size - 6, height: size - 6 }} />
     </View>
   );
 });

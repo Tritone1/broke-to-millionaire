@@ -77,7 +77,7 @@ export function AvatarDebugScreen() {
   }, [autoCycle, index]);
 
   return (
-    <Screen>
+    <Screen edges={['right', 'bottom', 'left']}>
       <ScrollView contentContainerStyle={styles.content}>
         <Text style={styles.title}>Avatar Debug</Text>
         <Text style={styles.meta}>Combination {index + 1} of {COMBINATION_COUNT}</Text>

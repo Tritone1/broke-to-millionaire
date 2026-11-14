@@ -57,7 +57,7 @@ export function createInitialPersistedState(now = Date.now()): PersistedGameStat
     lastDailyClaim: null,
     claimedMissions: [],
     claimedAchievements: [],
-    settings: { sound: true, haptics: true, language: 'en' },
+    settings: { sound: true, haptics: true, language: 'en', languageChosen: false },
     lastSavedAt: now,
     nextEventAt: randomEventAt(now),
   };

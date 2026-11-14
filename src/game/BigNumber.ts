@@ -138,3 +138,11 @@ export function log10(value: BigValue | number): number {
   const p = parts(value);
   return p.mantissa === 0 ? -Infinity : Math.log10(Math.abs(p.mantissa)) + p.exponent;
 }
+
+export function formatCurrency(value: BigValue | number): string {
+  const numeric = toNumber(value);
+  const sign = numeric < 0 ? '-' : '';
+  const absolute = Math.abs(numeric);
+  if (absolute < 1_000) return `${sign}$${absolute.toFixed(2)}`;
+  return `${sign}$${formatBig(absolute, 2)}`;
+}

@@ -52,8 +52,8 @@ const AtlasLayer = memo(function AtlasLayer({ source, columns, rows, column, row
   };
   return (
     <View pointerEvents="none" style={styles.layerCanvas}>
-      <Image source={activeSource} resizeMode="contain" onLoad={() => onReady(layerName, activeSource)} onError={reportError} style={[imageStyle, debugTint ? { tintColor: debugTint } : null]} />
-      {!debugTint && colorToken && tokenOpacity > 0 ? <Image source={activeSource} resizeMode="contain" style={[imageStyle, { tintColor: colorToken, opacity: tokenOpacity }]} /> : null}
+      <Image source={activeSource} resizeMode="contain" resizeMethod="scale" fadeDuration={0} onLoad={() => onReady(layerName, activeSource)} onError={reportError} style={[imageStyle, debugTint ? { tintColor: debugTint } : null]} />
+      {!debugTint && colorToken && tokenOpacity > 0 ? <Image source={activeSource} resizeMode="contain" resizeMethod="scale" fadeDuration={0} style={[imageStyle, { tintColor: colorToken, opacity: tokenOpacity }]} /> : null}
     </View>
   );
 });
@@ -76,8 +76,8 @@ const CanvasLayer = memo(function CanvasLayer({ source, colorToken, tokenOpacity
   };
   return (
     <View pointerEvents="none" style={styles.fullLayerCanvas}>
-      <Image source={source} resizeMode="contain" onLoad={() => onReady(layerName, source)} onError={reportError} style={[styles.canvasImage, debugTint ? { tintColor: debugTint } : null]} />
-      {!debugTint && colorToken && tokenOpacity > 0 ? <Image source={source} resizeMode="contain" style={[styles.canvasImage, { tintColor: colorToken, opacity: tokenOpacity }]} /> : null}
+      <Image source={source} resizeMode="contain" resizeMethod="scale" fadeDuration={0} onLoad={() => onReady(layerName, source)} onError={reportError} style={[styles.canvasImage, debugTint ? { tintColor: debugTint } : null]} />
+      {!debugTint && colorToken && tokenOpacity > 0 ? <Image source={source} resizeMode="contain" resizeMethod="scale" fadeDuration={0} style={[styles.canvasImage, { tintColor: colorToken, opacity: tokenOpacity }]} /> : null}
     </View>
   );
 });
@@ -128,14 +128,19 @@ const UnifiedLayers = memo(function UnifiedLayers({ character, art, portrait, de
   );
 });
 
-export function CharacterHead({ character, style }: { character: CharacterProfile; style?: StyleProp<ViewStyle> }) {
-  return <PlayerCharacter character={character} mode="portrait" style={style} />;
+export function CharacterHead({ character, style, portraitCrop = 'expanded' }: {
+  character: CharacterProfile;
+  style?: StyleProp<ViewStyle>;
+  portraitCrop?: 'expanded' | 'tight';
+}) {
+  return <PlayerCharacter character={character} mode="portrait" portraitCrop={portraitCrop} style={style} />;
 }
 
-export const PlayerCharacter = memo(function PlayerCharacter({ character, style, mode = 'full-body', debugLayers = false, showAnchors = false }: {
+export const PlayerCharacter = memo(function PlayerCharacter({ character, style, mode = 'full-body', portraitCrop = 'expanded', debugLayers = false, showAnchors = false }: {
   character: CharacterProfile;
   style?: StyleProp<ViewStyle>;
   mode?: CharacterRenderMode;
+  portraitCrop?: 'expanded' | 'tight';
   debugLayers?: boolean;
   showAnchors?: boolean;
 }) {
@@ -169,7 +174,7 @@ export const PlayerCharacter = memo(function PlayerCharacter({ character, style,
   const ready = atomicAssetSetReady(assetState, signature, AVATAR_REQUIRED_LAYERS);
   return (
     <View accessibilityLabel={`${character.name}, ${female ? 'female' : 'male'}, ${HAIRSTYLES[hairIndex]}`} accessibilityState={{ busy: !ready }} style={[styles.character, style]}>
-      <View style={portrait ? styles.portraitCanvas : styles.fullCanvas}>
+      <View style={portrait ? (portraitCrop === 'tight' ? styles.portraitCanvasTight : styles.portraitCanvas) : styles.fullCanvas}>
         <View testID="avatar-complete-layers" pointerEvents="none" style={StyleSheet.absoluteFill}>
           <UnifiedLayers key={signature} character={character} art={portrait ? CHARACTER_ART.portraitUnified : CHARACTER_ART.fullUnified} portrait={portrait} debugLayers={debugLayers} showAnchors={showAnchors} onLayerReady={layerReady} onLayerFailure={layerFailed} />
         </View>
@@ -181,6 +186,7 @@ export const PlayerCharacter = memo(function PlayerCharacter({ character, style,
 const styles = StyleSheet.create({
   character: { position: 'relative', overflow: 'visible' },
   portraitCanvas: { position: 'absolute', width: '111%', height: '100%', left: '-5.5%', bottom: 0, overflow: 'visible' },
+  portraitCanvasTight: { position: 'absolute', width: '100%', height: '100%', left: 0, bottom: 0, overflow: 'visible' },
   fullCanvas: { position: 'absolute', left: 0, right: 0, top: 0, bottom: 0, overflow: 'visible' },
   layerCanvas: { position: 'absolute', left: 0, right: 0, top: 0, bottom: 0, overflow: 'hidden' },
   fullLayerCanvas: { position: 'absolute', left: 0, right: 0, top: 0, bottom: 0, overflow: 'visible' },

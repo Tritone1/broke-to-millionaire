@@ -31,6 +31,14 @@
   "creatorLayout": { "showsSettingsGear": false, "bottomPadding": 96 },
   "proportions": { "headWidth": 320, "shoulderWidth": 512 },
   "headPlacement": { "x": 46, "y": 40, "width": 420, "height": 420 },
+  "ethnicityFaceFits": [
+    { "scaleX": 1.035, "scaleY": 1.005, "offsetY": -1 },
+    { "scaleX": 0.975, "scaleY": 0.985, "offsetY": 3 },
+    { "scaleX": 1.015, "scaleY": 1.03, "offsetY": -3 },
+    { "scaleX": 0.985, "scaleY": 1.015, "offsetY": -1 },
+    { "scaleX": 1.025, "scaleY": 1.025, "offsetY": -2 },
+    { "scaleX": 1.04, "scaleY": 0.995, "offsetY": 1 }
+  ],
   "hairSourcePlacement": { "x": 46, "y": -187, "width": 420, "height": 840 },
   "earMaskRadius": { "x": 34, "y": 54 },
   "clothingPlacement": { "x": -56, "y": 190, "width": 625, "height": 625 },

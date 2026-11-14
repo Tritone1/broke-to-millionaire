@@ -14,6 +14,7 @@ import { useLifeRuntime } from './src/hooks/useLifeRuntime';
 import { AppNavigator } from './src/navigation/AppNavigator';
 import { CharacterSetupScreen } from './src/screens/CharacterSetupScreen';
 import { StartMenuScreen } from './src/screens/StartMenuScreen';
+import { LanguageSelectionScreen } from './src/screens/LanguageSelectionScreen';
 import { RewardedAdProvider } from './src/services/ads';
 import { createInitialLifeState, useLifeStore } from './src/store/lifeStore';
 import { useSessionStore } from './src/store/sessionStore';
@@ -29,47 +30,53 @@ function GameApp() {
   const initializePurchases = usePurchaseStore((state) => state.initialize);
 
   useEffect(() => {
-    void bootstrap().then(() => {
-      const search = (globalThis as { location?: { search?: string } }).location?.search;
-      const params = search ? new URLSearchParams(search) : null;
-      if (params?.get('preview') === 'setup') {
-        useSessionStore.setState({ phase: 'setup', activeSlot: null, setupSlot: 1 });
-        return;
+    void (async () => {
+      try {
+        await bootstrap();
+        const search = (globalThis as { location?: { search?: string } }).location?.search;
+        const params = search ? new URLSearchParams(search) : null;
+        if (params?.get('preview') === 'setup') {
+          useSessionStore.setState({ phase: 'setup', activeSlot: null, setupSlot: 1 });
+          return;
+        }
+        if (params?.get('preview') !== 'game') return;
+        const now = Date.now();
+        const previewScreen = params.get('screen');
+        const initial = createInitialLifeState(now);
+        const requestedEthnicity = params.get('ethnicity');
+        const ethnicity = ETHNICITIES.some((item) => item.id === requestedEthnicity) ? requestedEthnicity as EthnicityId : 'european';
+        const hairStyle = Math.max(0, Math.min(HAIRSTYLES.length - 1, Number(params.get('hair')) || 0));
+        const requestedSkin = params.get('skin');
+        const parsedSkin = requestedSkin === null ? 2 : Number(requestedSkin);
+        const skinIndex = Math.max(0, Math.min(SKIN_TONES.length - 1, Number.isFinite(parsedSkin) ? parsedSkin : 2));
+        const female = params.get('gender') === 'female';
+        const previewGender = female ? 'female' as const : 'male' as const;
+        const preview = {
+          ...initial,
+          character: {
+            ...initial.character,
+            name: 'Aylin',
+            gender: previewGender,
+            pronouns: female ? 'she/her' : 'he/him',
+            ethnicity,
+            avatar: { ...initial.character.avatar, skin: SKIN_TONES[skinIndex] ?? SKIN_TONES[2], hairStyle: normalizeHairstyleForGender(hairStyle, previewGender) },
+          },
+          money: big(previewScreen === 'Market' || previewScreen === 'Event' ? 125_000 : 2_500),
+          lifetimeEarnings: big(125_000),
+          jobId: params.get('student') === '1' ? null : 'courier',
+          tutorialStep: 3 as const,
+          nextLifeEventAt: now + 999_999,
+        };
+        useLifeStore.getState().hydrate(preview);
+        if (previewScreen === 'Event') {
+          useLifeStore.setState({ activeLifeEvent: { id: 'preview-event', kind: 'invitation', title: 'A Chance to Help', description: 'A neighbor needs your decision.', eventId: LIFE_EVENTS[0]?.id } });
+        }
+        useSessionStore.setState({ phase: 'game', activeSlot: 1, setupSlot: null });
+      } catch (error) {
+        console.error('App bootstrap failed', error);
+        useSessionStore.setState({ phase: 'menu', activeSlot: null, setupSlot: null });
       }
-      if (params?.get('preview') !== 'game') return;
-      const now = Date.now();
-      const previewScreen = params.get('screen');
-      const initial = createInitialLifeState(now);
-      const requestedEthnicity = params.get('ethnicity');
-      const ethnicity = ETHNICITIES.some((item) => item.id === requestedEthnicity) ? requestedEthnicity as EthnicityId : 'european';
-      const hairStyle = Math.max(0, Math.min(HAIRSTYLES.length - 1, Number(params.get('hair')) || 0));
-      const requestedSkin = params.get('skin');
-      const parsedSkin = requestedSkin === null ? 2 : Number(requestedSkin);
-      const skinIndex = Math.max(0, Math.min(SKIN_TONES.length - 1, Number.isFinite(parsedSkin) ? parsedSkin : 2));
-      const female = params.get('gender') === 'female';
-      const previewGender = female ? 'female' as const : 'male' as const;
-      const preview = {
-        ...initial,
-        character: {
-          ...initial.character,
-          name: 'Aylin',
-          gender: previewGender,
-          pronouns: female ? 'she/her' : 'he/him',
-          ethnicity,
-          avatar: { ...initial.character.avatar, skin: SKIN_TONES[skinIndex] ?? SKIN_TONES[2], hairStyle: normalizeHairstyleForGender(hairStyle, previewGender) },
-        },
-        money: big(previewScreen === 'Market' || previewScreen === 'Event' ? 125_000 : 2_500),
-        lifetimeEarnings: big(125_000),
-        jobId: params.get('student') === '1' ? null : 'courier',
-        tutorialStep: 3 as const,
-        nextLifeEventAt: now + 999_999,
-      };
-      useLifeStore.getState().hydrate(preview);
-      if (previewScreen === 'Event') {
-        useLifeStore.setState({ activeLifeEvent: { id: 'preview-event', kind: 'invitation', title: 'A Chance to Help', description: 'A neighbor needs your decision.', eventId: LIFE_EVENTS[0]?.id } });
-      }
-      useSessionStore.setState({ phase: 'game', activeSlot: 1, setupSlot: null });
-    });
+    })();
   }, [bootstrap]);
 
   useEffect(() => {
@@ -86,6 +93,7 @@ function GameApp() {
     );
   }
 
+  if (phase === 'language') return <LanguageSelectionScreen />;
   if (phase === 'setup') return <CharacterSetupScreen />;
   if (phase !== 'game') return <StartMenuScreen />;
   if (!hydrated) return null;

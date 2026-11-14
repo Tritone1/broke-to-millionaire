@@ -5,7 +5,7 @@ import { useShallow } from 'zustand/react/shallow';
 import { COMPANY_TYPES, companyTypeById } from '../data/companyTypes';
 import { formatBig, toNumber } from '../game/BigNumber';
 import { BUSINESS_UNLOCK_NET_WORTH } from '../game/config';
-import { calculateLifeNetWorth, companyProfitPerSecond, companyValuation, hasBusinessAccess, useLifeStore, type CompanyUpgrades } from '../store/lifeStore';
+import { calculateLifeNetWorth, companyHiringCost, companyProfitPerSecond, companyUpgradeCost, companyValuation, hasBusinessAccess, useLifeStore, type CompanyUpgrades } from '../store/lifeStore';
 import { colors } from '../theme';
 import { AppButton } from '../components/AppButton';
 import { Card } from '../components/Card';
@@ -115,17 +115,25 @@ export function CompanyScreen() {
                 </View>
               ) : null}
               <View style={styles.actionRow}>
-                <AppButton variant="green" onPress={() => state.hireEmployee(company.id)} style={styles.half}>HIRE</AppButton>
+                <AppButton variant="green" onPress={() => state.hireEmployee(company.id)} style={styles.half}>HIRE · ${formatBig(companyHiringCost(company))}</AppButton>
                 <AppButton variant="ghost" disabled={company.employees.length === 0} onPress={() => state.fireEmployee(company.id)} style={styles.half}>FIRE LAST</AppButton>
               </View>
               <View style={styles.actionRow}>
-                <AppButton onPress={() => state.boostCompany(company.id)} style={styles.half}>RUN • 1.5× 30s</AppButton>
+                <AppButton onPress={() => state.boostCompany(company.id)} style={styles.half}>RUN · 8 ENERGY · 1.5×</AppButton>
                 <AppButton variant="ghost" disabled={company.manager} onPress={() => state.hireManager(company.id)} style={styles.half}>{company.manager ? '✓ MANAGED' : `MANAGER • $${formatBig(definition.startupCost * 1.5)}`}</AppButton>
               </View>
               <Text style={styles.upgradeTitle}>UPGRADES</Text>
               {(Object.keys(UPGRADE_LABELS) as (keyof CompanyUpgrades)[]).map((kind) => {
-                const cost = definition.startupCost * 0.3 * 2 ** company.upgrades[kind];
-                return <AppButton key={kind} variant="ghost" onPress={() => state.upgradeCompany(company.id, kind)} style={styles.upgrade}>{UPGRADE_LABELS[kind]} Lv {company.upgrades[kind]} • ${formatBig(cost)}</AppButton>;
+                const cost = companyUpgradeCost(company, kind);
+                return (
+                  <AppButton key={kind} variant="ghost" onPress={() => state.upgradeCompany(company.id, kind)} style={styles.upgrade}>
+                    <View style={styles.upgradeRow}>
+                      <Text numberOfLines={1} style={styles.upgradeName}>{UPGRADE_LABELS[kind]}</Text>
+                      <Text style={styles.upgradeLevel}>Lv {company.upgrades[kind]}</Text>
+                      <Text numberOfLines={1} style={styles.upgradePrice}>${formatBig(cost)}</Text>
+                    </View>
+                  </AppButton>
+                );
               })}
               <View style={styles.actionRow}>
                 <AppButton variant="ghost" disabled={company.isPublic || company.level < 5 || company.reputation < 60} onPress={() => state.ipoCompany(company.id)} style={styles.half}>{company.isPublic ? 'PUBLIC COMPANY' : 'LAUNCH IPO'}</AppButton>
@@ -180,5 +188,9 @@ const styles = StyleSheet.create({
   actionRow: { flexDirection: 'row', gap: 7, marginTop: 8 },
   half: { flex: 1, minHeight: 40, paddingHorizontal: 5 },
   upgradeTitle: { color: colors.muted, fontSize: 9, fontWeight: '900', letterSpacing: 1.2, marginTop: 13 },
-  upgrade: { marginTop: 6, minHeight: 39 },
+  upgrade: { marginTop: 6, minHeight: 39, paddingHorizontal: 12 },
+  upgradeRow: { width: '100%', flexDirection: 'row', alignItems: 'center' },
+  upgradeName: { flex: 1, color: colors.text, fontSize: 13, fontWeight: '900' },
+  upgradeLevel: { color: colors.muted, fontSize: 11, fontWeight: '800', marginHorizontal: 8 },
+  upgradePrice: { color: colors.goldDark, fontSize: 13, fontWeight: '900' },
 });

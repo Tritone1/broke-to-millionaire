@@ -10,6 +10,7 @@ import { monthlyBillsFor, totalIncomePerSecond, useLifeStore } from '../store/li
 import { estimatedLifespanYears } from '../game/wellness';
 import { colors } from '../theme';
 import { CharacterAvatar } from './CharacterAvatar';
+import { useTranslation } from '../hooks/useTranslation';
 
 const MONTHS = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
 type LayoutRect = Readonly<{ x: number; y: number; width: number; height: number }>;
@@ -28,13 +29,14 @@ function measureView(view: HostInstance | null) {
   });
 }
 
-function MiniMeter({ icon, label, value, color }: { icon: string; label: string; value: number; color: string }) {
+function MiniMeter({ icon, label, value, color, onPress }: { icon: string; label: string; value: number; color: string; onPress: () => void }) {
   return (
-    <View style={styles.meterRow}>
+    <Pressable accessibilityRole="button" accessibilityLabel={`Improve ${label.toLowerCase()}`} onPress={onPress} style={styles.meterRow}>
       <Text style={styles.meterIcon}>{icon}</Text>
       <Text style={styles.meterLabel}>{label}</Text>
       <View style={styles.meterTrack}><View style={[styles.meterFill, { width: `${Math.max(0, Math.min(100, value))}%`, backgroundColor: color }]} /></View>
-    </View>
+      <View style={styles.meterPlus}><Text style={styles.meterPlusText}>+</Text></View>
+    </Pressable>
   );
 }
 
@@ -63,6 +65,7 @@ function CountedCash({ value }: { value: BigValue }) {
 }
 
 export function LifeHeader() {
+  const { t } = useTranslation();
   const header = useLifeStore(useShallow((state) => {
     const monthlyIncome = totalIncomePerSecond(state) * state.monthLengthSeconds;
     const monthlyNet = monthlyIncome - monthlyBillsFor(state).total - state.lateFees;
@@ -140,9 +143,9 @@ export function LifeHeader() {
       </View>
       <View style={styles.bottomRow}>
         <View style={styles.meters}>
-          <MiniMeter icon="⚡" label="ENERGY" value={header.energy} color="#F3B72E" />
-          <MiniMeter icon="♥" label="HEALTH" value={header.health} color="#E84D63" />
-          <MiniMeter icon="●" label="HAPPY" value={header.happiness} color="#4DBD69" />
+          <MiniMeter icon="⚡" label={t('energy').toUpperCase()} value={header.energy} color="#F3B72E" onPress={() => navigation.navigate('Wellness', { focus: 'energy' })} />
+          <MiniMeter icon="♥" label={t('health').toUpperCase()} value={header.health} color="#E84D63" onPress={() => navigation.navigate('Wellness', { focus: 'health' })} />
+          <MiniMeter icon="●" label={t('happiness').toUpperCase()} value={header.happiness} color="#4DBD69" onPress={() => navigation.navigate('Wellness', { focus: 'happiness' })} />
         </View>
         <View style={styles.dateBlock}>
           <Text style={styles.date}>{MONTHS[header.gameMonth % 12]} {year}</Text>
@@ -185,6 +188,8 @@ const styles = StyleSheet.create({
   meterLabel: { width: 37, color: '#466173', fontSize: 6, fontWeight: '900' },
   meterTrack: { flex: 1, height: 5, borderRadius: 4, overflow: 'hidden', backgroundColor: '#D2D9D9', borderWidth: 0.5, borderColor: '#78909A' },
   meterFill: { height: '100%', borderRadius: 4 },
+  meterPlus: { width: 13, height: 13, marginLeft: 3, borderRadius: 7, alignItems: 'center', justifyContent: 'center', backgroundColor: '#17364C' },
+  meterPlusText: { color: '#FFFFFF', fontSize: 11, lineHeight: 12, fontWeight: '900' },
   dateBlock: { width: 61, alignItems: 'center' },
   date: { color: '#17364C', fontSize: 8, fontWeight: '900' },
   age: { color: '#5D7180', fontSize: 7, fontWeight: '800' },

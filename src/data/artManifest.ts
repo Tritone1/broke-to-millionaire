@@ -20,6 +20,24 @@ export const LOCATION_ART: Record<ArtLocation, LocationArt> = {
   hospital: { source: require('../../assets/game/locations/hospital.png'), title: 'City Hospital', accent: '#2A9DA0', framing: { default: 'full', compact: 'bust' } },
 };
 
+const housingArt = (source: ImageSourcePropType, title: string): LocationArt => ({ source, title, accent: '#F4B64A', framing: { default: 'full', compact: 'bust' } });
+
+export const HOUSING_ART: Record<string, LocationArt> = {
+  homeless: { ...LOCATION_ART.street, title: 'No Fixed Home' },
+  hostel: housingArt(require('../../assets/game/locations/housing_hostel.png'), 'Hostel Dorm'),
+  shared: housingArt(require('../../assets/game/locations/housing_shared.png'), 'Shared Home'),
+  studio: housingArt(require('../../assets/game/locations/housing_studio.png'), 'Your Studio'),
+  'one-bedroom': housingArt(require('../../assets/game/locations/housing_one-bedroom.png'), 'One-Bedroom Flat'),
+  apartment: housingArt(require('../../assets/game/locations/housing_apartment.png'), 'Your Apartment'),
+  house: housingArt(require('../../assets/game/locations/housing_house.png'), 'Small House'),
+  townhouse: housingArt(require('../../assets/game/locations/housing_townhouse.png'), 'Townhouse'),
+  villa: housingArt(require('../../assets/game/locations/housing_villa.png'), 'Villa'),
+  'luxury-condo': housingArt(require('../../assets/game/locations/housing_luxury-condo.png'), 'Luxury Condo'),
+  mansion: housingArt(require('../../assets/game/locations/housing_mansion.png'), 'Mansion'),
+  estate: housingArt(require('../../assets/game/locations/housing_estate.png'), 'Private Estate'),
+  penthouse: housingArt(require('../../assets/game/locations/housing_penthouse.png'), 'Penthouse'),
+};
+
 export const CHARACTER_ART = {
   mentorNpc: require('../../assets/game/characters/npc_mentor.png') as ImageSourcePropType,
   portraitUnified: {

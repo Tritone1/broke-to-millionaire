@@ -10,6 +10,11 @@ dist-avatar-check/
 coverage/
 artifacts/
 eas-inspect-archive/
+eas-inspect-*/
+android/.gradle/
+android/build/
+android/app/build/
+android/**/.cxx/
 
 # Local tests and reports are not needed in native build archives
 src/**/__tests__/

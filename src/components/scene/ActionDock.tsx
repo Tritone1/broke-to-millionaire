@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { CommonActions, useNavigation } from '@react-navigation/native';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withRepeat, withSequence, withSpring, withTiming } from 'react-native-reanimated';
+import { useTranslation } from '../../hooks/useTranslation';
 
 const ITEMS = [
   { id: 'home', label: 'Home', icon: '⌂', route: 'Home' },
@@ -12,6 +13,8 @@ const ITEMS = [
 ] as const;
 
 function NavItem({ item, active, onPress }: { item: typeof ITEMS[number]; active: boolean; onPress: () => void }) {
+  const { t } = useTranslation();
+  const label = t(item.id);
   const bounce = useSharedValue(0);
   const scale = useSharedValue(1);
   useEffect(() => {
@@ -22,14 +25,14 @@ function NavItem({ item, active, onPress }: { item: typeof ITEMS[number]; active
     <Pressable
       accessibilityRole="tab"
       accessibilityState={{ selected: active }}
-      accessibilityLabel={item.label}
+      accessibilityLabel={label}
       onPress={onPress}
       onPressIn={() => { scale.set(withSpring(0.86)); }}
       onPressOut={() => { scale.set(withSpring(1)); }}
       style={[styles.item, active && styles.activeItem]}
     >
       <Animated.View style={[styles.iconShell, active && styles.activeIconShell, iconStyle]}><Text style={[styles.icon, active && styles.activeIcon]}>{item.icon}</Text></Animated.View>
-      <Text numberOfLines={1} style={[styles.label, active && styles.activeLabel]}>{item.label}</Text>
+      <Text numberOfLines={1} style={[styles.label, active && styles.activeLabel]}>{label}</Text>
     </Pressable>
   );
 }

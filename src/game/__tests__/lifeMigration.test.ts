@@ -1,5 +1,5 @@
 import { migrateLifeSave } from '../lifeMigration';
-import { LIFE_SAVE_VERSION } from '../../store/lifeStore';
+import { LIFE_SAVE_VERSION, partnerAgeAtMonth } from '../../store/lifeStore';
 import { GAME_MONTH_SECONDS, MAX_PROMOTION_LEVEL } from '../config';
 import { SKIN_TONES } from '../../data/artManifest';
 
@@ -16,7 +16,7 @@ describe('life save migration', () => {
     expect(migrated.foodPlanId).toBe('survival');
     expect(migrated.character.ethnicity).toBe('european');
     expect(migrated.children).toEqual([]);
-    expect(migrated.settings).toEqual({ sound: false, haptics: true, language: 'en' });
+    expect(migrated.settings).toEqual({ sound: false, haptics: true, language: 'en', languageChosen: false });
     expect(migrated.monthLengthSeconds).toBe(GAME_MONTH_SECONDS);
     expect(migrated.promotionLevel).toBe(MAX_PROMOTION_LEVEL);
     expect(migrated.performance).toBe(100);
@@ -55,5 +55,40 @@ describe('life save migration', () => {
     expect(female.character.avatar.hairStyle).toBe(3);
     expect(female.character.avatar.skin).toBe(SKIN_TONES[2]);
     expect(male.character.avatar.hairStyle).toBe(0);
+  });
+
+  it('migrates a fixed partner age to a birth month that advances with the calendar', () => {
+    const migrated = migrateLifeSave({
+      saveVersion: 13,
+      gameMonth: 48,
+      partner: { name: 'Sam', age: 24, gender: 'non-binary', pronouns: 'they/them', occupation: 'Teacher', personality: 'Kind', avatarEmoji: '🧑', jobIncome: 2_200, stage: 'married', affection: 80, monthsTogether: 12, stayAtHome: false },
+    }, 1_000);
+
+    expect(partnerAgeAtMonth(migrated.partner!, 48)).toBe(24);
+    expect(partnerAgeAtMonth(migrated.partner!, 60)).toBe(25);
+    expect(migrated.partner?.happiness).toBe(70);
+    expect(migrated.partner?.careMonths).toEqual({});
+  });
+
+  it('migrates legacy timer-based course progress without losing active study', () => {
+    const now = 1_000_000;
+    const migrated = migrateLifeSave({
+      saveVersion: 14,
+      gameMonth: 20,
+      activeCourse: {
+        courseId: 'coding',
+        endsAt: now + 4 * GAME_MONTH_SECONDS * 1_000,
+        studyProgress: 65,
+        examReady: true,
+        examAttempts: 2,
+      },
+    }, now);
+    expect(migrated.activeCourse).toEqual({
+      courseId: 'coding',
+      enrolledMonth: 16,
+      activeProgress: 50,
+      examReady: true,
+      examAttempts: 2,
+    });
   });
 });

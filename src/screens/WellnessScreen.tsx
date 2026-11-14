@@ -1,5 +1,6 @@
-import { useState } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useEffect, useRef, useState } from 'react';
+import { ScrollView, StyleSheet, Text, View, type ScrollViewInstance } from 'react-native';
+import { useRoute, type RouteProp } from '@react-navigation/native';
 
 import { AppButton } from '../components/AppButton';
 import { Card } from '../components/Card';
@@ -12,6 +13,7 @@ import { formatBig, toNumber } from '../game/BigNumber';
 import { BASE_LIFESPAN_YEARS, estimatedLifespanYears, vitalityLabel } from '../game/wellness';
 import { useLifeStore } from '../store/lifeStore';
 import { colors } from '../theme';
+import type { LifeRootParamList } from '../navigation/AppNavigator';
 
 function signed(value: number): string {
   return value > 0 ? `+${value}` : String(value);
@@ -19,14 +21,33 @@ function signed(value: number): string {
 
 export function WellnessScreen() {
   const state = useLifeStore();
+  const route = useRoute<RouteProp<LifeRootParamList, 'Wellness'>>();
+  const focus = route.params?.focus;
   const [feedback, setFeedback] = useState('Choose activities to care for your character this month.');
+  const scrollRef = useRef<ScrollViewInstance>(null);
+  const [actionsTop, setActionsTop] = useState(0);
   const lifespan = estimatedLifespanYears(state);
   const remainingYears = Math.max(0, lifespan - state.age);
+  const focusActions = focus === 'energy'
+    ? new Set(['sleep', 'healthyMeal'])
+    : focus === 'health'
+      ? new Set(['doctor', 'exercise', 'healthyMeal'])
+      : focus === 'happiness'
+        ? new Set(['hobby', 'friends'])
+        : null;
+  const orderedActions = focusActions
+    ? [...WELLNESS_ACTIONS].sort((left, right) => Number(focusActions.has(right.id)) - Number(focusActions.has(left.id)))
+    : WELLNESS_ACTIONS;
+  useEffect(() => {
+    if (!focus || actionsTop <= 0) return undefined;
+    const timer = setTimeout(() => scrollRef.current?.scrollTo({ y: Math.max(0, actionsTop - 12), animated: true }), 120);
+    return () => clearTimeout(timer);
+  }, [actionsTop, focus]);
 
   return (
-    <Screen>
+    <Screen edges={['right', 'bottom', 'left']}>
       <LifeHeader />
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView ref={scrollRef} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <SceneStage location="hospital" pose={state.health < 35 ? 'hurt' : 'idle'} compact />
         <Text style={styles.eyebrow}>BODY & MIND</Text>
         <Text style={styles.title}>Wellness</Text>
@@ -53,9 +74,12 @@ export function WellnessScreen() {
           <Text style={styles.ruleText}>Very low energy and high stress also reduce monthly health. Better food and healthcare improve health every payday.</Text>
         </Card>
 
-        <Text style={styles.section}>ACTIVITIES · ONCE PER GAME MONTH</Text>
+        <View onLayout={(event) => setActionsTop(event.nativeEvent.layout.y)}>
+          <Text style={styles.section}>{focus ? `IMPROVE ${focus.toUpperCase()}` : 'ACTIVITIES'} · ONCE PER GAME MONTH</Text>
+          {focus ? <Card style={styles.focusCard}><Text style={styles.focusTitle}>Best actions for {focus}</Text><Text style={styles.focusText}>Recommended activities are shown first. Pick one that fits your cash and current energy.</Text></Card> : null}
+        </View>
         <Text style={styles.feedback}>{feedback}</Text>
-        {WELLNESS_ACTIONS.map((action) => {
+        {orderedActions.map((action) => {
           const used = state.wellnessActionMonths[action.id] === state.gameMonth;
           const cannotAfford = toNumber(state.money) < action.cost;
           const tooTired = state.energy + action.effects.energy < 0;
@@ -63,7 +87,7 @@ export function WellnessScreen() {
           const effectText = `Energy ${signed(action.effects.energy)} · Health ${signed(action.effects.health)} · Happiness ${signed(action.effects.happiness)} · Stress ${signed(action.effects.stress)}`;
           const disabledReason = used ? 'USED THIS MONTH' : cannotAfford ? 'NOT ENOUGH CASH' : tooTired ? 'NOT ENOUGH ENERGY' : action.cost === 0 ? 'FREE' : `$${formatBig(action.cost)}`;
           return (
-            <Card key={action.id} style={[styles.actionCard, used && styles.used]}>
+            <Card key={action.id} style={[styles.actionCard, focusActions?.has(action.id) && styles.recommended, used && styles.used]}>
               <View style={styles.actionRow}><Text style={styles.actionIcon}>{action.emoji}</Text><View style={styles.flex}><Text style={styles.actionTitle}>{action.name}</Text><Text style={styles.actionDescription}>{action.description}</Text></View></View>
               <Text style={styles.effects}>{effectText}</Text>
               <AppButton disabled={disabled} variant={action.cost === 0 ? 'green' : 'gold'} onPress={() => {
@@ -100,8 +124,12 @@ const styles = StyleSheet.create({
   rulesTitle: { color: colors.goldDark, fontSize: 10, fontWeight: '900', letterSpacing: 1.2 },
   ruleText: { color: colors.muted, fontSize: 10, lineHeight: 15, marginTop: 6 },
   section: { color: colors.muted, fontSize: 10, fontWeight: '900', letterSpacing: 1.4, marginTop: 22, marginBottom: 4 },
+  focusCard: { marginBottom: 8, backgroundColor: '#FFF4C9', borderColor: '#D8B44A' },
+  focusTitle: { color: colors.goldDark, fontSize: 13, fontWeight: '900', textTransform: 'capitalize' },
+  focusText: { color: colors.muted, fontSize: 9, lineHeight: 14, marginTop: 3 },
   feedback: { color: colors.greenDark, fontSize: 10, lineHeight: 15, marginBottom: 9 },
   actionCard: { marginBottom: 9 },
+  recommended: { borderColor: colors.goldDark, backgroundColor: '#FFFBED' },
   used: { opacity: 0.68 },
   actionRow: { flexDirection: 'row', alignItems: 'center' },
   actionIcon: { width: 47, fontSize: 31 },

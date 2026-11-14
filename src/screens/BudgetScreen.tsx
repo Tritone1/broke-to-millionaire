@@ -3,7 +3,7 @@ import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { AppButton } from '../components/AppButton';
 import { Card } from '../components/Card';
 import { LifeHeader } from '../components/LifeHeader';
-import { Screen } from '../components/Screen';
+import { StackScreen as Screen } from '../components/Screen';
 import { formatBig } from '../game/BigNumber';
 import { loanOfferFor, monthlyBillsFor, monthlyIncomeBreakdown, useLifeStore } from '../store/lifeStore';
 import { colors } from '../theme';

@@ -29,11 +29,20 @@ export function costOfLivingMultiplier(gameMonth: number): number {
 
 export function progressiveMonthlyTax(income: number): number {
   const safeIncome = Math.max(0, income);
-  const taxable12 = Math.min(1_500, Math.max(0, safeIncome - 1_000));
-  const taxable20 = Math.min(2_500, Math.max(0, safeIncome - 2_500));
+  const taxable10 = Math.min(1_500, Math.max(0, safeIncome - 1_000));
+  const taxable18 = Math.min(2_500, Math.max(0, safeIncome - 2_500));
   const taxable28 = Math.min(5_000, Math.max(0, safeIncome - 5_000));
-  const taxable36 = Math.max(0, safeIncome - 10_000);
-  return taxable12 * 0.12 + taxable20 * 0.2 + taxable28 * 0.28 + taxable36 * 0.36;
+  const taxable38 = Math.min(40_000, Math.max(0, safeIncome - 10_000));
+  const taxable45 = Math.max(0, safeIncome - 50_000);
+  return taxable10 * 0.1 + taxable18 * 0.18 + taxable28 * 0.28 + taxable38 * 0.38 + taxable45 * 0.45;
+}
+
+export function progressiveWealthUpkeep(netWorth: number): number {
+  const safeWorth = Math.max(0, netWorth);
+  const emerging = Math.min(900_000, Math.max(0, safeWorth - 100_000));
+  const wealthy = Math.min(99_000_000, Math.max(0, safeWorth - 1_000_000));
+  const ultraWealthy = Math.max(0, safeWorth - 100_000_000);
+  return emerging * 0.0015 + wealthy * 0.003 + ultraWealthy * 0.005;
 }
 
 export function careerOperatingCost(monthlySalary: number, jobRank: number): number {

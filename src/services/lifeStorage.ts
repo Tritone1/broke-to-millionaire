@@ -2,6 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { migrateLifeSave } from '../game/lifeMigration';
 import { createInitialLifeState, LIFE_SAVE_VERSION, type LifePersistedState, type LifeSettings } from '../store/lifeStore';
+import { isLanguage } from '../data/i18n';
 
 const LEGACY_SAVE_KEY = '@rich-simulator/life-save';
 const SLOT_PREFIX = '@rich-simulator/life-slot-';
@@ -58,7 +59,9 @@ export async function listLifeSlots(): Promise<(LifePersistedState | null)[]> {
 export async function loadGlobalSettings(): Promise<LifeSettings> {
   try {
     const raw = await AsyncStorage.getItem(GLOBAL_SETTINGS_KEY);
-    return raw ? { ...createInitialLifeState().settings, ...(JSON.parse(raw) as Partial<LifeSettings>) } : createInitialLifeState().settings;
+    if (!raw) return createInitialLifeState().settings;
+    const parsed = JSON.parse(raw) as Partial<LifeSettings>;
+    return { ...createInitialLifeState().settings, ...parsed, language: isLanguage(parsed.language) ? parsed.language : 'en', languageChosen: parsed.languageChosen === true };
   } catch {
     return createInitialLifeState().settings;
   }

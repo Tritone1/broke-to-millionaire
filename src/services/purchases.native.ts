@@ -9,11 +9,20 @@ import type { PurchaseAttempt, PurchaseServiceState, StoreProduct } from './purc
 type PurchasesSdk = typeof import('react-native-purchases');
 
 const IS_EXPO_GO = Constants.executionEnvironment === ExecutionEnvironment.StoreClient;
-const purchasesSdk: PurchasesSdk | null = IS_EXPO_GO
-  ? null
-  // RevenueCat is not included in Expo Go. This lazy native load keeps Expo Go usable.
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  : require('react-native-purchases') as PurchasesSdk;
+let cachedPurchasesSdk: PurchasesSdk | null | undefined;
+
+function getPurchasesSdk(): PurchasesSdk | null {
+  if (IS_EXPO_GO) return null;
+  if (cachedPurchasesSdk !== undefined) return cachedPurchasesSdk;
+  try {
+    // RevenueCat is not included in Expo Go. This lazy native load keeps Expo Go usable.
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    cachedPurchasesSdk = require('react-native-purchases') as PurchasesSdk;
+  } catch {
+    cachedPurchasesSdk = null;
+  }
+  return cachedPurchasesSdk;
+}
 
 let configured = false;
 const nativeProducts = new Map<PurchaseProductId, PurchasesStoreProduct>();
@@ -37,11 +46,12 @@ function fallbackProducts(): StoreProduct[] {
   }));
 }
 
-async function ensureConfigured(): Promise<boolean> {
-  if (!purchasesSdk || !apiKey()) return false;
-  const Purchases = purchasesSdk.default;
+async function ensureConfigured(): Promise<PurchasesSdk['default'] | null> {
+  const sdk = getPurchasesSdk();
+  if (!sdk || !apiKey()) return null;
+  const Purchases = sdk.default;
   const session = await ensureGuestSession();
-  if (session.status !== 'ready') return false;
+  if (session.status !== 'ready') return null;
 
   if (!configured) {
     Purchases.configure({ apiKey: apiKey()!, appUserID: session.user.id });
@@ -49,12 +59,12 @@ async function ensureConfigured(): Promise<boolean> {
   } else if (await Purchases.getAppUserID() !== session.user.id) {
     await Purchases.logIn(session.user.id);
   }
-  return true;
+  return Purchases;
 }
 
 async function loadState(): Promise<PurchaseServiceState> {
-  if (!await ensureConfigured()) return { available: false, products: fallbackProducts(), removeAds: false };
-  const Purchases = purchasesSdk!.default;
+  const Purchases = await ensureConfigured();
+  if (!Purchases) return { available: false, products: fallbackProducts(), removeAds: false };
   const [products, customerInfo] = await Promise.all([
     Purchases.getProducts([...PURCHASE_PRODUCT_IDS], Purchases.PRODUCT_CATEGORY.NON_SUBSCRIPTION),
     Purchases.getCustomerInfo(),
@@ -82,12 +92,12 @@ export async function initializePurchaseService(): Promise<PurchaseServiceState>
 }
 
 export async function purchaseProduct(productId: PurchaseProductId): Promise<PurchaseAttempt> {
-  if (!await ensureConfigured()) return { completed: false, cancelled: false, removeAds: false };
+  const Purchases = await ensureConfigured();
+  if (!Purchases) return { completed: false, cancelled: false, removeAds: false };
   const session = await ensureGuestSession();
   if (session.status !== 'ready' || session.user.is_anonymous) {
     throw new Error('Protect your cloud account in Profile before spending real money.');
   }
-  const Purchases = purchasesSdk!.default;
   let product = nativeProducts.get(productId);
   if (!product) {
     await loadState();
@@ -107,8 +117,8 @@ export async function purchaseProduct(productId: PurchaseProductId): Promise<Pur
 }
 
 export async function restorePurchases(): Promise<PurchaseServiceState> {
-  if (!await ensureConfigured()) return { available: false, products: fallbackProducts(), removeAds: false };
-  const Purchases = purchasesSdk!.default;
+  const Purchases = await ensureConfigured();
+  if (!Purchases) return { available: false, products: fallbackProducts(), removeAds: false };
   const customerInfo = await Purchases.restorePurchases();
   const state = await loadState();
   return { ...state, removeAds: ownsRemoveAds(customerInfo) };

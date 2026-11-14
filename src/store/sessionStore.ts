@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 
 import { formatBig } from '../game/BigNumber';
+import { isLanguage, type Language } from '../data/i18n';
 import { LOCATION_ART } from '../data/artManifest';
 import { preloadAvatarAssets } from '../services/avatarAssets';
 import { preloadImageSource } from '../services/imageAssetCache';
@@ -8,7 +9,7 @@ import { deleteLifeSlot, listLifeSlots, loadGlobalSettings, loadLifeSlot, saveGl
 import { calculateLifeNetWorth, selectLifePersistedState, useLifeStore, type CharacterProfile, type LifePersistedState, type LifeSettings } from './lifeStore';
 
 export type SlotSummary = { slot: SlotId; name: string; age: number; netWorth: string; playSeconds: number; savedAt: number };
-type SessionPhase = 'boot' | 'menu' | 'setup' | 'game' | 'settings' | 'help';
+type SessionPhase = 'boot' | 'language' | 'menu' | 'setup' | 'game' | 'settings' | 'help';
 
 type SessionStore = {
   phase: SessionPhase;
@@ -28,6 +29,7 @@ type SessionStore = {
   openPanel: (phase: 'settings' | 'help') => void;
   closePanel: () => void;
   updateSettings: (patch: Partial<LifeSettings>) => Promise<void>;
+  chooseLanguage: (language: Language) => Promise<void>;
 };
 
 async function preloadLifePresentation(state: Pick<LifePersistedState, 'character' | 'housing'>): Promise<void> {
@@ -54,11 +56,20 @@ export const useSessionStore = create<SessionStore>((set, get) => ({
   activeSlot: null,
   setupSlot: null,
   slots: {},
-  settings: { sound: true, haptics: true, language: 'en' },
+  settings: { sound: true, haptics: true, language: 'en', languageChosen: false },
   bootstrap: async () => {
-    const [states, settings] = await Promise.all([listLifeSlots(), loadGlobalSettings()]);
-    useLifeStore.getState().updateSettings(settings);
-    set({ slots: summaries(states), settings, phase: 'menu' });
+    try {
+      const [states, settings] = await Promise.all([listLifeSlots(), loadGlobalSettings()]);
+      useLifeStore.getState().updateSettings(settings);
+      const normalized = { ...settings, language: isLanguage(settings.language) ? settings.language : 'en' as const };
+      set({ slots: summaries(states), settings: normalized, phase: normalized.languageChosen ? 'menu' : 'language' });
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.error('Failed to bootstrap session store', error);
+      const fallbackSettings = { sound: true, haptics: true, language: 'en', languageChosen: false } as const;
+      useLifeStore.getState().updateSettings(fallbackSettings);
+      set({ slots: {}, settings: fallbackSettings, phase: 'language' });
+    }
   },
   refreshSlots: async () => set({ slots: summaries(await listLifeSlots()) }),
   openSetup: (setupSlot) => set({ phase: 'setup', setupSlot }),
@@ -103,6 +114,12 @@ export const useSessionStore = create<SessionStore>((set, get) => ({
   updateSettings: async (patch) => {
     const settings = { ...get().settings, ...patch };
     set({ settings });
+    useLifeStore.getState().updateSettings(settings);
+    await saveGlobalSettings(settings);
+  },
+  chooseLanguage: async (language) => {
+    const settings = { ...get().settings, language, languageChosen: true };
+    set({ settings, phase: get().phase === 'language' ? 'menu' : get().phase });
     useLifeStore.getState().updateSettings(settings);
     await saveGlobalSettings(settings);
   },

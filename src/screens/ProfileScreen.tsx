@@ -19,6 +19,9 @@ import { LifeHeader } from '../components/LifeHeader';
 import { ProgressBar } from '../components/ProgressBar';
 import { Screen } from '../components/Screen';
 import { SceneStage } from '../components/scene/SceneStage';
+import { LanguagePickerModal } from '../components/LanguagePicker';
+import { languageOption } from '../data/i18n';
+import { useTranslation } from '../hooks/useTranslation';
 
 const MISSIONS = [
   { id: 'work', title: 'Work hard 10 times', target: 10, reward: DAILY_MISSION_REWARDS.work },
@@ -55,6 +58,8 @@ export function ProfileScreen() {
   const syncVerifiedCash = usePurchaseStore((purchaseState) => purchaseState.syncPendingCash);
   const [adBusy, setAdBusy] = useState(false);
   const [adMessage, setAdMessage] = useState('');
+  const [languageOpen, setLanguageOpen] = useState(false);
+  const { t } = useTranslation();
   const privacyPolicyUrl = process.env.EXPO_PUBLIC_PRIVACY_POLICY_URL?.trim();
   const termsUrl = process.env.EXPO_PUBLIC_TERMS_URL?.trim();
   const supportUrl = process.env.EXPO_PUBLIC_SUPPORT_URL?.trim();
@@ -106,7 +111,7 @@ export function ProfileScreen() {
     await Linking.openURL(url);
   };
   return (
-    <Screen>
+    <Screen edges={['right', 'bottom', 'left']}>
       <LifeHeader />
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <SceneStage location="park" pose="celebrate" compact />
@@ -166,7 +171,7 @@ export function ProfileScreen() {
           <View style={styles.divider} />
           <View style={styles.setting}><Text style={styles.settingText}>📳 Haptics</Text><Switch value={state.settings.haptics} onValueChange={(haptics) => void session.updateSettings({ haptics })} trackColor={{ false: colors.border, true: colors.greenDark }} thumbColor={colors.green} /></View>
           <View style={styles.divider} />
-          <View style={styles.setting}><Text style={styles.settingText}>🌐 Language</Text><Text style={styles.language}>English</Text></View>
+          <View style={styles.setting}><Text style={styles.settingText}>🌐 {t('language')}</Text><AppButton variant="ghost" onPress={() => setLanguageOpen(true)} style={styles.languageButton}>{languageOption(state.settings.language).flag} {languageOption(state.settings.language).nativeName}</AppButton></View>
           {privacyOptionsRequired ? <><View style={styles.divider} /><AppButton variant="ghost" onPress={() => void showPrivacyOptions()} style={styles.button}>ADVERTISEMENT PRIVACY OPTIONS</AppButton></> : null}
         </Card>
         <Card style={styles.legalCard}>
@@ -176,10 +181,11 @@ export function ProfileScreen() {
           <AppButton variant="ghost" onPress={() => void openExternalUrl('Terms of Service', termsUrl)} style={styles.legalButton}>TERMS OF SERVICE</AppButton>
           <AppButton variant="ghost" onPress={() => void openExternalUrl('Support', supportUrl)} style={styles.legalButton}>SUPPORT</AppButton>
         </Card>
-        <AppButton variant="ghost" onPress={() => void session.returnToMenu()} style={styles.reset}>SAVE & RETURN TO TITLE</AppButton>
+        <AppButton variant="ghost" onPress={() => void session.returnToMenu()} style={styles.reset}>{t('saveAndReturn').toUpperCase()}</AppButton>
         <AppButton variant="danger" onPress={reset} style={styles.reset}>RESET SAVE</AppButton>
         <Text style={styles.version}>Rich Simulator • Save v{state.saveVersion}</Text>
       </ScrollView>
+      <LanguagePickerModal visible={languageOpen} selected={state.settings.language} onSelect={(language) => void session.chooseLanguage(language)} onClose={() => setLanguageOpen(false)} />
     </Screen>
   );
 }
@@ -223,6 +229,7 @@ const styles = StyleSheet.create({
   setting: { flexDirection: 'row', alignItems: 'center', minHeight: 55 },
   settingText: { flex: 1, color: colors.text, fontWeight: '800' },
   language: { color: colors.gold, fontWeight: '800' },
+  languageButton: { minHeight: 38, paddingVertical: 6, paddingHorizontal: 10 },
   divider: { height: 1, backgroundColor: colors.border },
   howTitle: { color: colors.goldDark, fontSize: 9, fontWeight: '900', letterSpacing: 1.3 },
   howText: { color: colors.muted, fontSize: 11, lineHeight: 17, marginTop: 5, marginBottom: 10 },

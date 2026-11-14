@@ -12,7 +12,7 @@ import { CONSUMER_GOODS } from '../data/goods';
 import { FOOD_PLANS, HEALTH_PLANS, HOUSING, VEHICLES, housingById, vehicleById } from '../data/living';
 import { formatBig } from '../game/BigNumber';
 import { childStage } from '../game/lifeCosts';
-import { monthlyBillsFor, totalIncomePerSecond, useLifeStore } from '../store/lifeStore';
+import { monthlyBillsFor, partnerAgeAtMonth, totalIncomePerSecond, useLifeStore, type PartnerCareAction } from '../store/lifeStore';
 import { colors } from '../theme';
 
 type Section = 'home' | 'food' | 'transport' | 'items' | 'family';
@@ -22,6 +22,15 @@ const SECTIONS: { id: Section; label: string }[] = [
   { id: 'transport', label: 'Transport' },
   { id: 'items', label: 'Items' },
   { id: 'family', label: 'Family' },
+];
+
+const PARTNER_ACTIONS: { id: PartnerCareAction; label: string; price: string }[] = [
+  { id: 'talk', label: 'TALK', price: 'FREE' },
+  { id: 'date', label: 'DATE', price: '$120' },
+  { id: 'gift', label: 'GIFT', price: '$600' },
+  { id: 'family', label: 'FAMILY DAY', price: '$800' },
+  { id: 'weekend', label: 'WEEKEND', price: '$1.5K' },
+  { id: 'vacation', label: 'VACATION', price: '$5K' },
 ];
 
 export function LivingScreen() {
@@ -67,7 +76,7 @@ export function LivingScreen() {
   const divorce = () => Alert.alert('Confirm divorce?', 'Cash and positive net assets are split equally.', [{ text: 'Cancel', style: 'cancel' }, { text: 'Divorce', style: 'destructive', onPress: () => state.relationshipAction('divorce') }]);
 
   return (
-    <Screen>
+    <Screen edges={['right', 'bottom', 'left']}>
       <LifeHeader />
       <View style={styles.tabs}>{SECTIONS.map((item) => <Pressable accessibilityRole="button" key={item.id} style={[styles.tab, section === item.id && styles.tabActive]} onPress={() => setSection(item.id)}><Text style={[styles.tabText, section === item.id && styles.tabTextActive]}>{item.label}</Text></Pressable>)}</View>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
@@ -127,7 +136,34 @@ export function LivingScreen() {
 
         {section === 'family' ? <>
           <Text style={styles.eyebrow}>RELATIONSHIPS</Text>
-          {state.partner ? <Card style={styles.current}><View style={styles.matchHeader}><Text style={styles.matchAvatar}>{state.partner.avatarEmoji}</Text><View style={styles.flex}><Text style={styles.currentTitle}>{state.partner.name} · {state.partner.stage.toUpperCase()}</Text><Text style={styles.meta}>Age {state.partner.age} · {state.partner.pronouns} · {state.partner.occupation}</Text><Text style={styles.personality}>{state.partner.personality}</Text></View></View><Text style={styles.meta}>Together {state.partner.monthsTogether} months · Income ${formatBig(state.partner.stayAtHome ? 0 : state.partner.jobIncome)}/mo</Text><View style={styles.setting}><Text style={styles.meta}>Stay home with family</Text><Switch value={state.partner.stayAtHome} onValueChange={state.togglePartnerWork} /></View><Text style={styles.meterLabel}>AFFECTION {Math.round(state.partner.affection)}%</Text><ProgressBar progress={state.partner.affection / 100} color="#FF79A8" /><View style={styles.buttonRow}><AppButton style={styles.flex} onPress={() => state.relationshipAction('date')}>DATE · $120</AppButton><AppButton variant="ghost" style={styles.flex} onPress={() => state.relationshipAction('gift')}>GIFT · $600</AppButton></View>{state.partner.stage === 'dating' ? <AppButton variant="green" style={styles.action} onPress={() => state.relationshipAction('propose')}>PROPOSE · $3K</AppButton> : null}{state.partner.stage === 'engaged' ? <AppButton variant="green" style={styles.action} onPress={() => state.relationshipAction('marry')}>WEDDING · $10K</AppButton> : null}{state.partner.stage === 'married' ? <AppButton variant="danger" style={styles.action} onPress={divorce}>DIVORCE</AppButton> : <AppButton variant="danger" style={styles.action} onPress={() => state.relationshipAction('breakup')}>BREAK UP</AppButton>}</Card> : state.datingCandidate ? <Card style={styles.matchCard}><Text style={styles.matchLabel}>TODAY’S MATCH</Text><View style={styles.matchHeader}><Text style={styles.matchAvatar}>{state.datingCandidate.avatarEmoji}</Text><View style={styles.flex}><Text style={styles.currentTitle}>{state.datingCandidate.name}, {state.datingCandidate.age}</Text><Text style={styles.meta}>{state.datingCandidate.gender} · {state.datingCandidate.pronouns}</Text><Text style={styles.meta}>{state.datingCandidate.occupation} · ${formatBig(state.datingCandidate.jobIncome)}/month</Text><Text style={styles.personality}>{state.datingCandidate.personality}</Text></View></View><View style={styles.buttonRow}><AppButton variant="green" style={styles.flex} onPress={() => state.acceptDatingCandidate()}>START DATING</AppButton><AppButton variant="ghost" style={styles.flex} onPress={state.skipDatingCandidate}>NEXT PERSON</AppButton></View></Card> : <Card><Text style={styles.itemTitle}>Single</Text><Text style={styles.meta}>Browse a generated profile with an age, career, personality, pronouns, and income before deciding to date.</Text><AppButton style={styles.action} onPress={state.meetPartner}>FIND A MATCH</AppButton></Card>}
+          {state.partner ? (
+            <Card style={styles.current}>
+              <View style={styles.matchHeader}>
+                <Text style={styles.matchAvatar}>{state.partner.avatarEmoji}</Text>
+                <View style={styles.flex}>
+                  <Text style={styles.currentTitle}>{state.partner.name} · {state.partner.stage.toUpperCase()}</Text>
+                  <Text style={styles.meta}>Age {partnerAgeAtMonth(state.partner, state.gameMonth)} · {state.partner.pronouns} · {state.partner.occupation}</Text>
+                  <Text style={styles.personality}>{state.partner.personality}</Text>
+                </View>
+              </View>
+              <Text style={styles.meta}>Together {state.partner.monthsTogether} months · Income ${formatBig(state.partner.stayAtHome ? 0 : state.partner.jobIncome)}/mo</Text>
+              <View style={styles.setting}><Text style={styles.meta}>Stay home with family</Text><Switch value={state.partner.stayAtHome} onValueChange={state.togglePartnerWork} /></View>
+              <Text style={styles.meterLabel}>AFFECTION {Math.round(state.partner.affection)}%</Text>
+              <ProgressBar progress={state.partner.affection / 100} color="#FF79A8" />
+              <Text style={styles.meterLabel}>PARTNER HAPPINESS {Math.round(state.partner.happiness)}%</Text>
+              <ProgressBar progress={state.partner.happiness / 100} color={colors.gold} />
+              <Text style={styles.explainer}>Relationships need attention each month. Unpaid bills, overcrowding, and neglect reduce happiness.</Text>
+              <View style={styles.careGrid}>
+                {PARTNER_ACTIONS.map((item) => {
+                  const used = state.partner?.careMonths[item.id] === state.gameMonth;
+                  return <AppButton key={item.id} disabled={used} variant={item.id === 'vacation' ? 'green' : 'ghost'} style={styles.careButton} onPress={() => state.relationshipAction(item.id)}>{used ? `${item.label} · DONE` : `${item.label} · ${item.price}`}</AppButton>;
+                })}
+              </View>
+              {state.partner.stage === 'dating' ? <AppButton variant="green" style={styles.action} onPress={() => state.relationshipAction('propose')}>PROPOSE · $3K</AppButton> : null}
+              {state.partner.stage === 'engaged' ? <AppButton variant="green" style={styles.action} onPress={() => state.relationshipAction('marry')}>WEDDING · $10K</AppButton> : null}
+              {state.partner.stage === 'married' ? <AppButton variant="danger" style={styles.action} onPress={divorce}>DIVORCE</AppButton> : <AppButton variant="danger" style={styles.action} onPress={() => state.relationshipAction('breakup')}>BREAK UP</AppButton>}
+            </Card>
+          ) : state.datingCandidate ? <Card style={styles.matchCard}><Text style={styles.matchLabel}>TODAY’S MATCH</Text><View style={styles.matchHeader}><Text style={styles.matchAvatar}>{state.datingCandidate.avatarEmoji}</Text><View style={styles.flex}><Text style={styles.currentTitle}>{state.datingCandidate.name}, {state.datingCandidate.age}</Text><Text style={styles.meta}>{state.datingCandidate.gender} · {state.datingCandidate.pronouns}</Text><Text style={styles.meta}>{state.datingCandidate.occupation} · ${formatBig(state.datingCandidate.jobIncome)}/month</Text><Text style={styles.personality}>{state.datingCandidate.personality}</Text></View></View><View style={styles.buttonRow}><AppButton variant="green" style={styles.flex} onPress={() => state.acceptDatingCandidate()}>START DATING</AppButton><AppButton variant="ghost" style={styles.flex} onPress={state.skipDatingCandidate}>NEXT PERSON</AppButton></View></Card> : <Card><Text style={styles.itemTitle}>Single</Text><Text style={styles.meta}>Browse a generated profile with an age, career, personality, pronouns, and income before deciding to date.</Text><AppButton style={styles.action} onPress={state.meetPartner}>FIND A MATCH</AppButton></Card>}
           <Text style={styles.section}>CHILDREN</Text>
           <Card><View style={styles.setting}><View style={styles.flex}><Text style={styles.itemTitle}>Hire a nanny</Text><Text style={styles.meta}>$600/month · prevents family energy penalties.</Text></View><Switch value={state.nanny} onValueChange={state.toggleNanny} /></View><AppButton disabled={!state.partner} style={styles.action} onPress={() => state.haveChild()}>WELCOME A CHILD · $1.5K</AppButton></Card>
           {state.children.map((child) => { const age = Math.max(0, (state.gameMonth - child.birthMonth) / 12); return <Card key={child.id} style={styles.item}><Text style={styles.itemTitle}>{child.name} · {childStage(age).toUpperCase()}</Text><Text style={styles.meta}>Age {Math.floor(age)} · Happiness {Math.round(child.happiness)} · Education {Math.round(child.education)}</Text><ProgressBar progress={child.happiness / 100} color={colors.gold} /></Card>; })}
@@ -171,6 +207,8 @@ const styles = StyleSheet.create({
   itemDescription: { color: colors.muted, fontSize: 10, lineHeight: 15, marginTop: 5 },
   cost: { color: colors.goldDark, fontSize: 10, fontWeight: '800', marginTop: 4 },
   buttonRow: { flexDirection: 'row', gap: 6, marginTop: 10 },
+  careGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 6 },
+  careButton: { width: '48%', flexGrow: 1 },
   owned: { color: colors.greenDark, textAlign: 'center', fontSize: 10, fontWeight: '900', marginTop: 10 },
   option: { flexDirection: 'row', alignItems: 'center', marginBottom: 9 },
   action: { marginTop: 10 },

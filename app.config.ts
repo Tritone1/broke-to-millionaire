@@ -56,6 +56,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
         'expo-build-properties',
         {
           android: {
+            newArchEnabled: false,
             extraProguardRules: '-keep class com.google.android.gms.internal.consent_sdk.** { *; }',
           },
         },

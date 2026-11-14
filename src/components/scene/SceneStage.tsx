@@ -2,7 +2,7 @@ import { memo, useEffect, useState } from 'react';
 import { Image, Pressable, StyleSheet, Text, View, type ImageSourcePropType, type LayoutChangeEvent, type ViewStyle } from 'react-native';
 import Animated, { Easing, interpolate, useAnimatedStyle, useSharedValue, withRepeat, withSequence, withSpring, withTiming } from 'react-native-reanimated';
 
-import { CHARACTER_ART, LOCATION_ART, type ArtLocation, type SceneFraming } from '../../data/artManifest';
+import { CHARACTER_ART, HOUSING_ART, LOCATION_ART, type ArtLocation, type SceneFraming } from '../../data/artManifest';
 import { avatarFrameGeometry } from '../../game/avatarGeometry';
 import { imageSourceKey, markImageSourceDecoded, preloadImageSource } from '../../services/imageAssetCache';
 import { useLifeStore, type CharacterProfile } from '../../store/lifeStore';
@@ -122,11 +122,14 @@ export const SceneStage = memo(function SceneStage({
 }) {
   const month = useLifeStore((state) => state.gameMonth);
   const character = useLifeStore((state) => state.character);
+  const housingId = useLifeStore((state) => state.housing.id);
   const isNight = useLifeStore((state) => state.monthProgressSeconds < state.monthLengthSeconds * 0.14 || state.monthProgressSeconds > state.monthLengthSeconds * 0.82);
   const drift = useSharedValue(0);
   const glow = useSharedValue(0);
   const [stageSize, setStageSize] = useState({ width: 390, height: compact ? 190 : 520 });
-  const selected = LOCATION_ART[artLocation(location)];
+  const selected = location === 'home'
+    ? (HOUSING_ART[housingId] ?? HOUSING_ART.homeless!)
+    : LOCATION_ART[artLocation(location)];
   const backgroundKey = imageSourceKey(selected.source);
   const [backgroundState, setBackgroundState] = useState({ key: backgroundKey, ready: false, failed: false });
   const selectedFraming = framing ?? (compact ? selected.framing.compact : selected.framing.default);

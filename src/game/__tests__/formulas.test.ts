@@ -1,5 +1,5 @@
 import { BUSINESSES } from '../../data/businesses';
-import { formatBig, toNumber } from '../BigNumber';
+import { formatBig, formatCurrency, toNumber } from '../BigNumber';
 import {
   bulkBusinessCost,
   businessCost,
@@ -58,5 +58,11 @@ describe('big number formatting', () => {
     [1e21, '1ac'],
   ])('formats %s as %s', (value, expected) => {
     expect(formatBig(value)).toBe(expected);
+  });
+
+  it('formats ordinary positive and negative currency without floating-point tails', () => {
+    expect(formatCurrency(-719.5050000000001)).toBe('-$719.51');
+    expect(formatCurrency(1970.495)).toBe('$1.97K');
+    expect(formatCurrency(0)).toBe('$0.00');
   });
 });

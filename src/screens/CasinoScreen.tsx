@@ -225,11 +225,11 @@ export function CasinoScreen() {
   const [limitText, setLimitText] = useState(String(state.dailyLossLimit));
   const unlocked = toNumber(calculateLifeNetWorth(state)) >= 25_000;
   if (!unlocked) {
-    return <Screen><LifeHeader /><SceneStage location="casino" pose="sad" compact /><View style={styles.locked}><Text style={styles.lockIcon}>🔒</Text><Text style={styles.lockTitle}>Casino locked</Text><Text style={styles.lockText}>Reach $25K net worth to unlock the entertainment district.</Text></View><ActionDock active="casino" /></Screen>;
+    return <Screen edges={['right', 'bottom', 'left']}><LifeHeader /><SceneStage location="casino" pose="sad" compact /><View style={styles.locked}><Text style={styles.lockIcon}>🔒</Text><Text style={styles.lockTitle}>Casino locked</Text><Text style={styles.lockText}>Reach $25K net worth to unlock the entertainment district.</Text></View><ActionDock active="casino" /></Screen>;
   }
   const netResult = state.casinoStats.totalWon - state.casinoStats.totalWagered;
   return (
-    <Screen>
+    <Screen edges={['right', 'bottom', 'left']}>
       <LifeHeader />
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <SceneStage location="casino" pose="celebrate" compact />

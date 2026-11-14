@@ -24,7 +24,7 @@ export function PurchaseScreen() {
   }, [initialize, initialized]);
 
   return (
-    <Screen>
+    <Screen edges={['right', 'bottom', 'left']}>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <Text style={styles.eyebrow}>LILI GAMES STORE</Text>
         <Text style={styles.title}>Give your life a boost</Text>

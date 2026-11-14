@@ -1,6 +1,9 @@
 import { big, toNumber } from '../BigNumber';
 import { BROKER_UNLOCK_NET_WORTH, BUSINESS_UNLOCK_NET_WORTH, GAME_MONTH_SECONDS, LOAN_BASE_APR, LOAN_REQUIRED_JOB_MONTHS } from '../config';
-import { cappedOfflineSeconds, calculateOfflineLifeEarnings, createInitialLifeState, hasBrokerAccess, hasBusinessAccess, jobRequirementsMet, jobSalaryPerSecond, loanOfferFor, monthlyBillsFor, monthlyIncomeBreakdown, offlineClaimAmount, processGameMonth, simulateOfflineProgress, totalIncomePerSecond, useLifeStore, type LifePersistedState } from '../../store/lifeStore';
+import { cappedOfflineSeconds, calculateOfflineLifeEarnings, companyHiringCost, companyOperatingLossPerSecond, companyProfitPerSecond, companyValuation, createInitialLifeState, hasBrokerAccess, hasBusinessAccess, jobRequirementsMet, jobSalaryPerSecond, loanOfferFor, monthlyBillsFor, monthlyIncomeBreakdown, offlineClaimAmount, processGameMonth, simulateOfflineProgress, totalIncomePerSecond, useLifeStore, type LifePersistedState, type PlayerCompany } from '../../store/lifeStore';
+import { progressiveWealthUpkeep } from '../lifeCosts';
+import { COURSES } from '../../data/courses';
+import { courseProgress, STUDY_SESSION_ENERGY } from '../courseProgress';
 
 describe('offline time safety and cap', () => {
   const state = { ...createInitialLifeState(), jobId: 'courier' };
@@ -27,6 +30,37 @@ describe('offline time safety and cap', () => {
     expect(cappedOfflineSeconds(366 * 24 * 60 * 60 * 1_000)).toBe(0);
     const futureSave = { ...createInitialLifeState(20_000), lastSeenTimestamp: 30_000 };
     expect(simulateOfflineProgress(futureSave, 20_000).summary.countedSeconds).toBe(0);
+  });
+});
+
+describe('progressive wealth difficulty', () => {
+  it('does not charge a new or early-game player', () => {
+    expect(progressiveWealthUpkeep(0)).toBe(0);
+    expect(progressiveWealthUpkeep(100_000)).toBe(0);
+  });
+
+  it('scales upkeep after the player becomes wealthy', () => {
+    expect(progressiveWealthUpkeep(1_000_000)).toBeGreaterThan(0);
+    expect(progressiveWealthUpkeep(100_000_000)).toBeGreaterThan(progressiveWealthUpkeep(1_000_000));
+    expect(progressiveWealthUpkeep(1_000_000_000)).toBeGreaterThan(progressiveWealthUpkeep(100_000_000));
+  });
+});
+
+describe('partner happiness', () => {
+  it('applies a care action once per game month and charges its real cost', () => {
+    const initial = createInitialLifeState();
+    useLifeStore.setState({
+      ...initial,
+      money: big(10_000),
+      partner: { name: 'Sam', birthMonth: -36, gender: 'non-binary', pronouns: 'they/them', occupation: 'Teacher', personality: 'Kind', avatarEmoji: '🧑', jobIncome: 2_200, stage: 'married', affection: 60, happiness: 50, monthsTogether: 12, stayAtHome: false, careMonths: {} },
+      hydrated: true,
+    });
+
+    expect(useLifeStore.getState().relationshipAction('weekend')).toBe(true);
+    expect(toNumber(useLifeStore.getState().money)).toBe(8_500);
+    expect(useLifeStore.getState().partner?.happiness).toBe(68);
+    expect(useLifeStore.getState().relationshipAction('weekend')).toBe(false);
+    expect(toNumber(useLifeStore.getState().money)).toBe(8_500);
   });
 });
 
@@ -105,7 +139,7 @@ describe('offline calendar and net result', () => {
 
 describe('monthly payday', () => {
   it('shows salary and additional income separately instead of calling the total salary', () => {
-    const state = { ...createInitialLifeState(), jobId: 'courier', partner: { name: 'Sam', age: 21, gender: 'non-binary' as const, pronouns: 'they/them' as const, occupation: 'Teacher', personality: 'Calm and thoughtful', avatarEmoji: '🧑', stage: 'dating' as const, affection: 50, monthsTogether: 1, jobIncome: 2_200, stayAtHome: false } };
+    const state = { ...createInitialLifeState(), jobId: 'courier', partner: { name: 'Sam', birthMonth: -36, gender: 'non-binary' as const, pronouns: 'they/them' as const, occupation: 'Teacher', personality: 'Calm and thoughtful', avatarEmoji: '🧑', stage: 'dating' as const, affection: 50, happiness: 70, monthsTogether: 1, jobIncome: 2_200, stayAtHome: false, careMonths: {} } };
     const income = monthlyIncomeBreakdown(state);
     expect(income.salary).toBe(450);
     expect(income.partner).toBe(2_200);
@@ -157,6 +191,39 @@ describe('monthly payday', () => {
     expect(useLifeStore.getState().gameMonth).toBe(1);
     expect(toNumber(useLifeStore.getState().money)).toBeGreaterThan(startingCash);
     expect(toNumber(useLifeStore.getState().accruedMonthlyIncome)).toBe(0);
+  });
+
+  it.each([1, 2, 4] as const)('advances course passive progress once per game month at %sx', (speed) => {
+    const now = 50_000;
+    const initial = {
+      ...createInitialLifeState(now),
+      money: big(10_000),
+      timeSpeed: speed,
+      nextLifeEventAt: now + 999_999,
+      activeCourse: { courseId: 'medical', enrolledMonth: 0, activeProgress: 0, examReady: false, examAttempts: 0 },
+    };
+    useLifeStore.setState({ ...initial, hydrated: true, runtimeNow: now, offlineSummary: null, monthlySummary: null, activeLifeEvent: null });
+    const ticks = 12 / speed;
+    for (let index = 1; index <= ticks; index += 1) useLifeStore.getState().tick(5_000, now + index * 5_000);
+    const current = useLifeStore.getState();
+    const course = COURSES.find((item) => item.id === 'medical')!;
+    expect(current.gameMonth).toBe(1);
+    expect(courseProgress(current.activeCourse!, course, current.gameMonth).passiveProgress).toBeCloseTo(50 / 24, 5);
+  });
+
+  it('blocks active study without enough energy and caps active preparation at 50%', () => {
+    const base = createInitialLifeState();
+    useLifeStore.setState({
+      ...base,
+      hydrated: true,
+      energy: STUDY_SESSION_ENERGY - 1,
+      activeCourse: { courseId: 'coding', enrolledMonth: 0, activeProgress: 49, examReady: false, examAttempts: 0 },
+    });
+    expect(useLifeStore.getState().studyActiveCourse()).toBe(false);
+    useLifeStore.setState({ energy: 100 });
+    expect(useLifeStore.getState().studyActiveCourse()).toBe(true);
+    expect(useLifeStore.getState().activeCourse?.activeProgress).toBe(50);
+    expect(useLifeStore.getState().energy).toBe(100 - STUDY_SESSION_ENERGY);
   });
 });
 
@@ -212,6 +279,43 @@ describe('first-minute onboarding balance', () => {
     expect(useLifeStore.getState().startCourse('coding')).toBe(true);
     expect(useLifeStore.getState().activeCourse?.courseId).toBe('coding');
     expect(toNumber(useLifeStore.getState().money)).toBe(500);
+  });
+
+  it('allows enrollment with a negative projected monthly net when the upfront fee is affordable', () => {
+    const base = createInitialLifeState();
+    const initial = {
+      ...base,
+      money: big(2_000),
+      energy: 100,
+      jobId: null,
+      completedCourses: ['highSchool'],
+      housing: { ...base.housing, id: 'studio', tenure: 'rent' as const },
+      vehicle: { ...base.vehicle, id: 'public', tenure: 'public' as const },
+      foodPlanId: 'balanced',
+    };
+    const projectedBeforeTuition = totalIncomePerSecond(initial) * initial.monthLengthSeconds - monthlyBillsFor(initial).total;
+    expect(projectedBeforeTuition).toBeLessThan(0);
+    useLifeStore.setState({ ...initial, hydrated: true });
+    expect(useLifeStore.getState().startCourse('coding')).toBe(true);
+    expect(useLifeStore.getState().activeCourse?.courseId).toBe('coding');
+    const bills = monthlyBillsFor(useLifeStore.getState());
+    expect(bills.lines.find((line) => line.id === 'tuition')?.amount).toBe(100);
+    expect(totalIncomePerSecond(useLifeStore.getState()) * GAME_MONTH_SECONDS - bills.total).toBeLessThan(0);
+  });
+
+  it('charges active-course tuition once in each processed monthly budget', () => {
+    const base = createInitialLifeState();
+    const state: LifePersistedState = {
+      ...base,
+      money: big(10_000),
+      accruedMonthlyIncome: big(0),
+      activeCourse: { courseId: 'coding', enrolledMonth: 0, activeProgress: 0, examReady: false, examAttempts: 0 },
+    };
+    const tuition = monthlyBillsFor(state).lines.filter((line) => line.id === 'tuition');
+    expect(tuition).toHaveLength(1);
+    expect(tuition[0]?.amount).toBe(100);
+    const after = { ...state, ...processGameMonth(state) };
+    expect(after.monthlyBudgets.at(-1)?.expenses).toBe(monthlyBillsFor(state).total);
   });
 
   it('blocks better jobs until their living standards are met', () => {
@@ -273,5 +377,54 @@ describe('wealth gates and strict bank credit', () => {
     expect(useLifeStore.getState().loans[0]?.monthsRemaining).toBe(12);
 
     expect(loanOfferFor({ ...eligible, lateFees: 1 }).eligible).toBe(false);
+  });
+});
+
+describe('company difficulty and anti-runaway balance', () => {
+  const company = (overrides: Partial<PlayerCompany> = {}): PlayerCompany => ({
+    id: 'company-test',
+    typeId: 'cafe',
+    name: 'Test Cafe',
+    level: 1,
+    employees: [],
+    upgrades: { marketing: 0, equipment: 0, location: 0 },
+    reputation: 30,
+    manager: false,
+    boostUntil: 0,
+    isPublic: false,
+    ownership: 1,
+    ...overrides,
+  });
+
+  it('uses operating costs and a long payback period for a new company', () => {
+    const monthlyProfit = companyProfitPerSecond(company()) * GAME_MONTH_SECONDS;
+    expect(monthlyProfit).toBeGreaterThan(0);
+    expect(monthlyProfit).toBeLessThan(150);
+  });
+
+  it('applies diminishing employee returns and makes reckless over-hiring unprofitable', () => {
+    const employees = Array.from({ length: 100 }, (_, index) => ({ id: `employee-${index}`, name: 'Employee', salaryPerSecond: 1.2, productivity: 100 }));
+    const overstaffed = company({ employees });
+    expect(companyProfitPerSecond(overstaffed)).toBe(0);
+    expect(companyOperatingLossPerSecond(overstaffed)).toBeGreaterThan(0);
+    const state = { ...createInitialLifeState(), companies: [overstaffed] };
+    expect(monthlyBillsFor(state).lines.some((line) => line.id === 'company-losses')).toBe(true);
+    expect(companyHiringCost(company({ employees: employees.slice(0, 20) }))).toBeGreaterThan(companyHiringCost(company()));
+  });
+
+  it('keeps a mature company far below the former multiplicative runaway', () => {
+    const employees = Array.from({ length: 291 }, (_, index) => ({ id: `employee-${index}`, name: 'Employee', salaryPerSecond: 700, productivity: 100 }));
+    const mature = company({ typeId: 'techStartup', level: 49, employees, upgrades: { marketing: 16, equipment: 16, location: 16 }, reputation: 100 });
+    const monthlyProfit = companyProfitPerSecond(mature) * GAME_MONTH_SECONDS;
+    expect(monthlyProfit).toBeGreaterThan(0);
+    expect(monthlyProfit).toBeLessThan(20_000_000_000);
+  });
+
+  it('does not create immediate resale profit by hiring one employee', () => {
+    const before = company();
+    const hiringCost = companyHiringCost(before);
+    const employee = { id: 'employee-1', name: 'Employee', salaryPerSecond: 1.2, productivity: 100 };
+    const resaleGain = (companyValuation(company({ employees: [employee] })) - companyValuation(before)) * 0.75;
+    expect(resaleGain).toBeLessThan(hiringCost);
   });
 });

@@ -6,9 +6,10 @@ import Animated, { useAnimatedStyle, useSharedValue, withSequence, withSpring, w
 
 import { LifeHeader } from '../components/LifeHeader';
 import { ActionDock } from '../components/scene/ActionDock';
-import { SceneStage, type SceneAction } from '../components/scene/SceneStage';
+import { SceneStage, type SceneAction, type SceneLocation } from '../components/scene/SceneStage';
 import { Screen } from '../components/Screen';
 import { jobById } from '../data/jobs';
+import { housingById } from '../data/living';
 import { useLifeStore } from '../store/lifeStore';
 
 function GoalChip() {
@@ -28,6 +29,16 @@ function GoalChip() {
       <Text style={styles.goalArrow}>{open ? '▲' : '▼'}</Text>
     </Pressable>
   );
+}
+
+function homeLocationForHousing(housingId: string): SceneLocation {
+  const status = housingById(housingId).status;
+  if (status <= 1) return 'street';
+  if (status <= 10) return 'apartment';
+  if (status <= 36) return 'cafe';
+  if (status <= 68) return 'office';
+  if (status <= 92) return 'bank';
+  return 'park';
 }
 
 export function LifeHomeScreen() {
@@ -56,6 +67,7 @@ export function LifeHomeScreen() {
     float.value = withSequence(withSpring(0.05), withTiming(1, { duration: 900 }));
   };
   const pose = health < 30 ? 'hurt' : energy < 15 ? 'sad' : jobId ? 'talk' : 'idle';
+  const homeLocation = homeLocationForHousing(housingId);
   const actions: SceneAction[] = [
     { id: 'desk', icon: '💼', label: jobId ? 'Work shift' : 'Find work', hint: jobId ? 'Add to paycheck' : 'Apply in Career', onPress: work, position: 'left', highlighted: tutorialStep === 0 },
     { id: 'laptop', icon: '🎓', label: 'Study', hint: 'Needs a stable life', onPress: () => go('Study'), position: 'right', highlighted: false },
@@ -66,7 +78,7 @@ export function LifeHomeScreen() {
       <LifeHeader />
       <GoalChip />
       <View style={styles.sceneWrap}>
-        <SceneStage location={housingId === 'homeless' ? 'street' : 'apartment'} pose={pose} hero actions={actions} />
+        <SceneStage location={homeLocation} pose={pose} hero actions={actions} />
         {floatReward > 0 ? <Animated.Text pointerEvents="none" style={[styles.floatMoney, floatStyle]}>+${floatReward} PAYCHECK</Animated.Text> : null}
         <View pointerEvents="none" style={styles.paydayChip}><Text style={styles.paydayLabel}>{jobId ? jobById(jobId)?.title ?? 'Working' : 'Unemployed'}</Text><Text style={styles.paydayValue}>{jobId ? 'PAYDAY EACH MONTH' : 'APPLY IN CAREER'}</Text></View>
       </View>
