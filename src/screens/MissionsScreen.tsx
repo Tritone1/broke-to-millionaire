@@ -1,4 +1,5 @@
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, View } from 'react-native';
+import { Text } from '../components/LocalizedText';
 
 import { ACHIEVEMENTS } from '../data/achievements';
 import { DAILY_MISSIONS } from '../data/missions';

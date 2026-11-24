@@ -1,4 +1,5 @@
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, View } from 'react-native';
+import { Text } from '../components/LocalizedText';
 
 import { RANKS } from '../data/ranks';
 import { add, formatBig, toNumber } from '../game/BigNumber';

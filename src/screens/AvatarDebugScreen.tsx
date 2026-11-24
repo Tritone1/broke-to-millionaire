@@ -1,5 +1,6 @@
 import React from 'react';
-import { ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Switch, View } from 'react-native';
+import { Text } from '../components/LocalizedText';
 
 import { AppButton } from '../components/AppButton';
 import { CharacterAvatar } from '../components/CharacterAvatar';

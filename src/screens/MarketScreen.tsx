@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
-import { ScrollView, StyleSheet, Text, TextInput, useWindowDimensions, View } from 'react-native';
+import { ScrollView, StyleSheet, TextInput, useWindowDimensions, View } from 'react-native';
+import { Text } from '../components/LocalizedText';
 import { useShallow } from 'zustand/react/shallow';
 
 import { MARKET_ASSETS, marketAssetById, type MarketAssetKind } from '../data/marketAssets';

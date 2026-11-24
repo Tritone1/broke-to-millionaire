@@ -47,3 +47,18 @@ supabase/.temp/
 supabase/.env*
 .supabase/
 .sites/
+
+# Build-time avatar preview atlases. Runtime uses the smaller per-ethnicity
+# textures so Android never decodes a 6144px-wide image.
+assets/game/characters/avatar_full_head_skin_?@2x.png
+assets/game/characters/avatar_full_neck_skin_?@2x.png
+assets/game/characters/avatar_portrait_head_v8_skin_?@2x.png
+assets/game/characters/avatar_portrait_neck_v8_skin_?@2x.png
+assets/game/characters/avatar_full_hair_back_v4_male@2x.png
+assets/game/characters/avatar_full_hair_back_v4_female@2x.png
+assets/game/characters/avatar_full_hair_front_v4_male@2x.png
+assets/game/characters/avatar_full_hair_front_v4_female@2x.png
+assets/game/characters/avatar_portrait_hair_back_v7_male@2x.png
+assets/game/characters/avatar_portrait_hair_back_v7_female@2x.png
+assets/game/characters/avatar_portrait_hair_front_v7_male@2x.png
+assets/game/characters/avatar_portrait_hair_front_v7_female@2x.png

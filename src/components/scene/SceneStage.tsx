@@ -1,5 +1,6 @@
 import { memo, useEffect, useState } from 'react';
-import { Image, Pressable, StyleSheet, Text, View, type ImageSourcePropType, type LayoutChangeEvent, type ViewStyle } from 'react-native';
+import { Image, Pressable, StyleSheet, View, type ImageSourcePropType, type LayoutChangeEvent, type ViewStyle } from 'react-native';
+import { Text } from '../LocalizedText';
 import Animated, { Easing, interpolate, useAnimatedStyle, useSharedValue, withRepeat, withSequence, withSpring, withTiming } from 'react-native-reanimated';
 
 import { CHARACTER_ART, HOUSING_ART, LOCATION_ART, type ArtLocation, type SceneFraming } from '../../data/artManifest';

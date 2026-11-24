@@ -146,8 +146,10 @@ describe('unified avatar geometry', () => {
   it.each(HUD_PORTRAIT_SCREENS)('%s HUD portrait renders every required gender-aware layer', () => {
     expect(AVATAR_REQUIRED_LAYERS).toEqual(['hairBack', 'outfitBack', 'neck', 'outfitFront', 'headAndEars', 'hairFront']);
     expect(CHARACTER_ART.portraitUnified.necklineFront).toBeDefined();
-    expect(CHARACTER_ART.portraitUnified.headAtlases).toHaveLength(6);
-    expect(CHARACTER_ART.portraitUnified.neckAtlases).toHaveLength(6);
+    expect(CHARACTER_ART.portraitUnified.headLayers).toHaveLength(6);
+    expect(CHARACTER_ART.portraitUnified.neckLayers).toHaveLength(6);
+    CHARACTER_ART.portraitUnified.headLayers.forEach((ethnicityLayers) => expect(ethnicityLayers).toHaveLength(6));
+    CHARACTER_ART.portraitUnified.neckLayers.forEach((ethnicityLayers) => expect(ethnicityLayers).toHaveLength(6));
     expect(CHARACTER_ART.portraitUnified.hairBack).toHaveLength(6);
     expect(CHARACTER_ART.portraitUnified.hairFront).toHaveLength(6);
   });

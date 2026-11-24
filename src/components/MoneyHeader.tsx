@@ -1,4 +1,5 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
+import { Text } from './LocalizedText';
 
 import { formatBig } from '../game/BigNumber';
 import { totalIncomePerSecond } from '../game/economy';

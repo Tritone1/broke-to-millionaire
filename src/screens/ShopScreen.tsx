@@ -1,4 +1,5 @@
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, View } from 'react-native';
+import { Text } from '../components/LocalizedText';
 
 import { LIFESTYLE_ITEMS } from '../data/shop';
 import { formatBig } from '../game/BigNumber';

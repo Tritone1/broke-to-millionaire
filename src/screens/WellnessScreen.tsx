@@ -1,5 +1,6 @@
-import { useEffect, useRef, useState } from 'react';
-import { ScrollView, StyleSheet, Text, View, type ScrollViewInstance } from 'react-native';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { ScrollView, StyleSheet, View, type ScrollViewInstance } from 'react-native';
+import { Text } from '../components/LocalizedText';
 import { useRoute, type RouteProp } from '@react-navigation/native';
 
 import { AppButton } from '../components/AppButton';
@@ -14,6 +15,8 @@ import { BASE_LIFESPAN_YEARS, estimatedLifespanYears, vitalityLabel } from '../g
 import { useLifeStore } from '../store/lifeStore';
 import { colors } from '../theme';
 import type { LifeRootParamList } from '../navigation/AppNavigator';
+import { RewardedAdCard } from '../components/RewardedAdCard';
+import { useRewardedAdPlacement } from '../hooks/useRewardedAdPlacement';
 
 function signed(value: number): string {
   return value > 0 ? `+${value}` : String(value);
@@ -28,6 +31,8 @@ export function WellnessScreen() {
   const [actionsTop, setActionsTop] = useState(0);
   const lifespan = estimatedLifespanYears(state);
   const remainingYears = Math.max(0, lifespan - state.age);
+  const applyEnergyReward = useCallback(() => useLifeStore.getState().grantAdEnergyReward(), []);
+  const energyAd = useRewardedAdPlacement({ placement: 'Restore Energy +20', applyReward: applyEnergyReward });
   const focusActions = focus === 'energy'
     ? new Set(['sleep', 'healthyMeal'])
     : focus === 'health'
@@ -67,6 +72,18 @@ export function WellnessScreen() {
           <Card style={styles.vital}><Text style={styles.vitalIcon}>●</Text><Text style={styles.vitalName}>HAPPINESS</Text><Text style={styles.vitalValue}>{Math.round(state.happiness)}</Text><Text style={styles.vitalState}>{vitalityLabel(state.happiness)}</Text><ProgressBar progress={state.happiness / 100} color="#4BAF65" /></Card>
           <Card style={styles.vital}><Text style={styles.vitalIcon}>☁</Text><Text style={styles.vitalName}>STRESS</Text><Text style={styles.vitalValue}>{Math.round(state.stress)}</Text><Text style={styles.vitalState}>{state.stress <= 20 ? 'Calm' : state.stress <= 55 ? 'Manageable' : state.stress <= 79 ? 'High' : 'Dangerous'}</Text><ProgressBar progress={state.stress / 100} color="#8E62B6" /></Card>
         </View>
+
+        <RewardedAdCard
+          title="Restore Energy"
+          description="Optional advertisement reward: restore 20 energy, up to the maximum of 100. Available every 10 minutes."
+          buttonLabel="WATCH AD · +20 ENERGY"
+          busy={energyAd.busy}
+          adsReady={energyAd.adsReady}
+          disabled={state.energy >= 100}
+          readyAt={state.adRewardCooldowns.energy}
+          message={state.energy >= 100 ? 'Energy is already full.' : energyAd.message}
+          onPress={() => void energyAd.watch()}
+        />
 
         <Card style={styles.rules}>
           <Text style={styles.rulesTitle}>ENERGY RULES</Text>

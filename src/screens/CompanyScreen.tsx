@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Alert, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Alert, ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import { Text } from '../components/LocalizedText';
 import { useShallow } from 'zustand/react/shallow';
 
 import { COMPANY_TYPES, companyTypeById } from '../data/companyTypes';

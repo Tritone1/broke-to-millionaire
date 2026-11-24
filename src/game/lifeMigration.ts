@@ -45,6 +45,17 @@ export function migrateLifeSave(raw: unknown, now = Date.now()): LifePersistedSt
     } : null,
     settings: { ...initial.settings, ...(parsed.settings ?? {}) },
     wellnessActionMonths: parsed.wellnessActionMonths && typeof parsed.wellnessActionMonths === 'object' ? parsed.wellnessActionMonths : {},
+    adRewardCooldowns: parsed.adRewardCooldowns && typeof parsed.adRewardCooldowns === 'object'
+      ? {
+          energy: Number.isFinite(parsed.adRewardCooldowns.energy) ? Math.max(0, parsed.adRewardCooldowns.energy ?? 0) : undefined,
+          salary: Number.isFinite(parsed.adRewardCooldowns.salary) ? Math.max(0, parsed.adRewardCooldowns.salary ?? 0) : undefined,
+          opportunity: Number.isFinite(parsed.adRewardCooldowns.opportunity) ? Math.max(0, parsed.adRewardCooldowns.opportunity ?? 0) : undefined,
+        }
+      : {},
+    nextWorkShiftMultiplier: parsed.nextWorkShiftMultiplier === 1.25 ? 1.25 : 1,
+    extraOpportunityCredits: Math.min(1, Math.max(0, Math.floor(
+      Number.isFinite(parsed.extraOpportunityCredits) ? parsed.extraOpportunityCredits ?? 0 : 0,
+    ))),
     activeCourse: parsed.activeCourse ? (() => {
       const legacy = parsed.activeCourse as typeof parsed.activeCourse & { endsAt?: number; studyProgress?: number; enrolledMonth?: number; activeProgress?: number };
       const course = COURSES.find((item) => item.id === legacy.courseId);

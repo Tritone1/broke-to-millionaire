@@ -1,4 +1,6 @@
-import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useCallback } from 'react';
+import { Alert, ScrollView, StyleSheet, View } from 'react-native';
+import { Text } from '../components/LocalizedText';
 
 import { AppButton } from '../components/AppButton';
 import { Card } from '../components/Card';
@@ -15,10 +17,14 @@ import type { Requirement } from '../game/requirements';
 import { jobSalaryPerSecond, useLifeStore } from '../store/lifeStore';
 import { colors } from '../theme';
 import { Screen } from '../components/Screen';
+import { RewardedAdCard } from '../components/RewardedAdCard';
+import { useRewardedAdPlacement } from '../hooks/useRewardedAdPlacement';
 
 export function WorkScreen() {
   const state = useLifeStore();
   const currentJob = jobById(state.jobId);
+  const applySalaryReward = useCallback(() => useLifeStore.getState().grantAdSalaryBonus(), []);
+  const salaryAd = useRewardedAdPlacement({ placement: 'Next work shift salary +25%', applyReward: applySalaryReward });
   const currentExperience = state.jobId ? state.jobExperienceMonths[state.jobId] ?? 0 : 0;
   const currentGrowth = state.jobId ? JOB_SKILL_GROWTH[state.jobId] : undefined;
   const nextMilestone = currentGrowth
@@ -45,6 +51,17 @@ export function WorkScreen() {
           <Text style={styles.eyebrow}>CAREER CENTER</Text><Text style={styles.title}>Work</Text>
           <Card style={styles.payday}><View style={styles.payRow}><View><Text style={styles.payLabel}>CURRENT PAYCHECK</Text><Text style={styles.payValue}>${formatBig(state.accruedMonthlyIncome, 2)}</Text></View><View style={styles.payRight}><Text style={styles.payLabel}>PAYDAY IN</Text><Text style={styles.payTime}>{Math.max(0, Math.ceil(state.monthLengthSeconds - state.monthProgressSeconds))} sec</Text></View></View><Text style={styles.payNote}>Salary and work bonuses are paid together once per game month.</Text></Card>
           {currentJob ? <Card style={styles.current}><View style={styles.row}><Text style={styles.emoji}>{currentJob.emoji}</Text><View style={styles.flex}><Text style={styles.smallLabel}>YOUR JOB</Text><Text style={styles.jobTitle}>{currentJob.title}</Text><Text style={styles.salary}>${formatBig(jobSalaryPerSecond(state) * state.monthLengthSeconds, 2)} monthly salary</Text><Text style={styles.skillGrowth}>Skill growth: {jobSkillGrowthLabel(currentJob.id)}</Text>{currentGrowth ? <Text style={styles.skillGrowth}>Next skill bonus: {monthsIntoCycle} / {currentGrowth.intervalMonths} working months · Next at {nextMilestone} months</Text> : null}{nextRewardLabel ? <Text style={styles.skillGrowth}>Next reward: {nextRewardLabel}</Text> : null}</View></View><View style={styles.performance}><View style={[styles.performanceFill, { width: `${state.performance}%` }]} /></View><Text style={styles.promotion}>{state.promotionLevel >= MAX_PROMOTION_LEVEL ? 'MAXIMUM PROMOTION LEVEL' : `Promotion needs 100 performance and ${nextPromotionMonths} months experience · ${Math.round(state.performance)}/100 · ${currentExperience}/${nextPromotionMonths} months`}</Text><AppButton disabled={state.energy < 5 || state.stress >= 98} onPress={() => state.workHard()} style={styles.action}><View style={styles.shiftContent}><Text style={styles.shiftTitle}>WORK SHIFT</Text><Text style={styles.shiftMeta}>5 energy · +${formatBig(shiftBonus, 0)} to next paycheck</Text></View></AppButton><AppButton variant="danger" onPress={() => state.quitJob()} style={styles.quit}>QUIT JOB</AppButton></Card> : <Card><Text style={styles.emptyTitle}>You are unemployed</Text><Text style={styles.note}>Choose an entry-level job or meet the checklist for a better career.</Text></Card>}
+          <RewardedAdCard
+            title="Next Shift Salary Bonus"
+            description="Watch an optional advertisement for +25% on your next eligible completed work shift only. The bonus cannot stack."
+            buttonLabel="WATCH AD · +25% NEXT SALARY"
+            busy={salaryAd.busy}
+            adsReady={salaryAd.adsReady}
+            disabled={!currentJob || state.nextWorkShiftMultiplier > 1}
+            readyAt={state.adRewardCooldowns.salary}
+            message={!currentJob ? 'Get a job before activating this reward.' : state.nextWorkShiftMultiplier > 1 ? 'The +25% next-shift bonus is active.' : salaryAd.message}
+            onPress={() => void salaryAd.watch()}
+          />
           <Text style={styles.section}>JOB INTERVIEWS</Text>
           {JOBS.map((job) => {
             const current = state.jobId === job.id;

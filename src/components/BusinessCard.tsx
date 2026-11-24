@@ -1,4 +1,5 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
+import { Text } from './LocalizedText';
 
 import type { BusinessDefinition } from '../data/businesses';
 import { formatBig } from '../game/BigNumber';

@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, ScrollView, StyleSheet, View } from 'react-native';
+import { Text } from '../components/LocalizedText';
 
 import { AppButton } from '../components/AppButton';
 import { Card } from '../components/Card';

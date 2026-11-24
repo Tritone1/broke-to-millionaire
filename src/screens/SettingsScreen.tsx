@@ -1,6 +1,7 @@
 import Constants from 'expo-constants';
 import { useState } from 'react';
-import { Alert, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
+import { Alert, ScrollView, StyleSheet, Switch, View } from 'react-native';
+import { Text } from '../components/LocalizedText';
 
 import { clearGame } from '../services/storage';
 import { useGameStore } from '../store/gameStore';

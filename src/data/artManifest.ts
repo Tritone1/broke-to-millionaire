@@ -1,6 +1,7 @@
 import type { ImageSourcePropType } from 'react-native';
 
 import { HAIRSTYLES, SKIN_TONES } from './avatarOptions';
+import { FULL_HEAD_LAYERS, FULL_NECK_LAYERS, PORTRAIT_HEAD_LAYERS, PORTRAIT_NECK_LAYERS } from './generatedAvatarHeadAssets';
 
 export { HAIRSTYLES, HAIRSTYLE_INDEXES, SKIN_TONES, hairstyleIndexesForGender, normalizeHairstyleForGender, normalizeSkinTone, renderedAvatarGender } from './avatarOptions';
 
@@ -59,22 +60,8 @@ export const CHARACTER_ART = {
       require('../../assets/game/characters/avatar_portrait_hair_front_v7_braids.png'),
       require('../../assets/game/characters/avatar_portrait_hair_front_v7_high-ponytail.png'),
     ] as ImageSourcePropType[],
-    headAtlases: [
-      require('../../assets/game/characters/avatar_portrait_head_v8_skin_0.png'),
-      require('../../assets/game/characters/avatar_portrait_head_v8_skin_1.png'),
-      require('../../assets/game/characters/avatar_portrait_head_v8_skin_2.png'),
-      require('../../assets/game/characters/avatar_portrait_head_v8_skin_3.png'),
-      require('../../assets/game/characters/avatar_portrait_head_v8_skin_4.png'),
-      require('../../assets/game/characters/avatar_portrait_head_v8_skin_5.png'),
-    ] as ImageSourcePropType[],
-    neckAtlases: [
-      require('../../assets/game/characters/avatar_portrait_neck_v8_skin_0.png'),
-      require('../../assets/game/characters/avatar_portrait_neck_v8_skin_1.png'),
-      require('../../assets/game/characters/avatar_portrait_neck_v8_skin_2.png'),
-      require('../../assets/game/characters/avatar_portrait_neck_v8_skin_3.png'),
-      require('../../assets/game/characters/avatar_portrait_neck_v8_skin_4.png'),
-      require('../../assets/game/characters/avatar_portrait_neck_v8_skin_5.png'),
-    ] as ImageSourcePropType[],
+    headLayers: PORTRAIT_HEAD_LAYERS,
+    neckLayers: PORTRAIT_NECK_LAYERS,
   },
   fullUnified: {
     clothing: require('../../assets/game/characters/avatar_full_clothing.png') as ImageSourcePropType,
@@ -95,22 +82,8 @@ export const CHARACTER_ART = {
       require('../../assets/game/characters/avatar_full_hair_front_v4_braids.png'),
       require('../../assets/game/characters/avatar_full_hair_front_v4_high-ponytail.png'),
     ] as ImageSourcePropType[],
-    headAtlases: [
-      require('../../assets/game/characters/avatar_full_head_skin_0.png'),
-      require('../../assets/game/characters/avatar_full_head_skin_1.png'),
-      require('../../assets/game/characters/avatar_full_head_skin_2.png'),
-      require('../../assets/game/characters/avatar_full_head_skin_3.png'),
-      require('../../assets/game/characters/avatar_full_head_skin_4.png'),
-      require('../../assets/game/characters/avatar_full_head_skin_5.png'),
-    ] as ImageSourcePropType[],
-    neckAtlases: [
-      require('../../assets/game/characters/avatar_full_neck_skin_0.png'),
-      require('../../assets/game/characters/avatar_full_neck_skin_1.png'),
-      require('../../assets/game/characters/avatar_full_neck_skin_2.png'),
-      require('../../assets/game/characters/avatar_full_neck_skin_3.png'),
-      require('../../assets/game/characters/avatar_full_neck_skin_4.png'),
-      require('../../assets/game/characters/avatar_full_neck_skin_5.png'),
-    ] as ImageSourcePropType[],
+    headLayers: FULL_HEAD_LAYERS,
+    neckLayers: FULL_NECK_LAYERS,
   },
 };
 
@@ -124,10 +97,10 @@ export const EXPRESSIONS = ['neutral', 'happy', 'sad', 'angry', 'shocked'] as co
 export const CHARACTER_LAYER_ORDER = ['hairBack', 'outfitBack', 'neck', 'outfitFront', 'head', 'hairFront'] as const;
 export const CHARACTER_ATLAS_ROWS = {
   hair: { source: 'hairAtlas', row: 0, variants: HAIRSTYLES.length },
-  head: { source: 'headAtlases', columns: 6, genderRows: 2, skinAtlases: SKIN_TONES.length },
+  head: { source: 'headLayers', ethnicityVariants: 6, genderRows: 2, skinVariants: SKIN_TONES.length },
   body: { source: 'customizationAtlas', row: 2, variantsPerGender: OUTFITS.male.length },
   outfit: { source: 'customizationAtlas', row: 2, variantsPerGender: OUTFITS.male.length },
-  face: { source: 'painted into headAtlases', variants: 6 },
+  face: { source: 'painted into headLayers', variants: 6 },
 } as const;
 
 export const ART_PIPELINE = {

@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import { AppState, type AppStateStatus } from 'react-native';
 
 import { startTimestampLoop } from '../game/tick';
+import { isAdAppStateTransition } from '../services/adLifecycle';
 import { cancelCashReminder, requestNotificationPermission, scheduleCashReminder } from '../services/notifications';
 import { loadLifeSlot, saveLifeSlot, type SlotId } from '../services/lifeStorage';
 import { selectLifePersistedState, useLifeStore } from '../store/lifeStore';
@@ -15,6 +16,7 @@ async function persistLifeNow(slot: SlotId): Promise<void> {
 
 export function useLifeRuntime(): void {
   const backgroundedAt = useRef<number | null>(null);
+  const backgroundedForAd = useRef(false);
   const activeSlot = useSessionStore((state) => state.activeSlot);
 
   useEffect(() => {
@@ -26,6 +28,10 @@ export function useLifeRuntime(): void {
     }, 10_000);
     const handleState = (next: AppStateStatus) => {
       if (next === 'background' || next === 'inactive') {
+        if (isAdAppStateTransition()) {
+          backgroundedForAd.current = true;
+          return;
+        }
         if (backgroundedAt.current === null) {
           backgroundedAt.current = Date.now();
           void persistLifeNow(activeSlot);
@@ -33,6 +39,15 @@ export function useLifeRuntime(): void {
         }
       } else if (next === 'active') {
         void cancelCashReminder();
+        if (backgroundedForAd.current || isAdAppStateTransition()) {
+          backgroundedForAd.current = false;
+          backgroundedAt.current = null;
+          // A full-screen ad is not offline play. Move the runtime clock forward,
+          // but do not write the still-open reward summary back to storage before
+          // the awaiting ad claim has had a chance to clear it.
+          useLifeStore.getState().markSaved(Date.now());
+          return;
+        }
         if (backgroundedAt.current !== null) {
           void loadLifeSlot(activeSlot).then((saved) => {
             if (saved) useLifeStore.getState().hydrate(saved);

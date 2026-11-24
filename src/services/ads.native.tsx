@@ -1,12 +1,17 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type PropsWithChildren } from 'react';
 import Constants, { ExecutionEnvironment } from 'expo-constants';
-import { Modal, Platform, StyleSheet, Text, View } from 'react-native';
+import { Modal, StyleSheet, View } from 'react-native';
+import { Text } from '../components/LocalizedText';
 import type { InterstitialAd, RewardedAd } from 'react-native-google-mobile-ads';
 
 import { colors } from '../theme';
 import { rewardedRequestOptions } from './adRequest';
+import { beginAdPresentation, endAdPresentation } from './adLifecycle';
 import { ensureGuestSession } from './backend/authService';
 import { useAdAccessStore } from '../store/adAccessStore';
+import { trackAdEvent } from './ads/adAnalytics';
+import { adUnitId } from './ads/adConfig';
+import { canShowInterstitial, createInterstitialSession, recordInterstitialShown, recordMeaningfulTransition, recordRewardedAd } from './ads/interstitialPolicy';
 
 type GoogleMobileAdsSdk = typeof import('react-native-google-mobile-ads');
 
@@ -29,34 +34,19 @@ function getGoogleMobileAdsSdk(): GoogleMobileAdsSdk | null {
   return cachedGoogleMobileAdsSdk;
 }
 
-const INTERSTITIAL_COOLDOWN_MS = 180_000;
+export type RewardedAdStatus = 'idle' | 'loading' | 'showing' | 'completed' | 'failed' | 'unavailable';
 
 type AdContextValue = {
   showRewardedAd: (placement: string) => Promise<boolean>;
-  showInterstitialIfEligible: () => Promise<boolean>;
+  showInterstitialIfEligible: (transition?: string) => Promise<boolean>;
   showPrivacyOptions: () => Promise<void>;
   privacyOptionsRequired: boolean;
   adsReady: boolean;
   cashRewardsRequireServerClaim: boolean;
+  rewardedStatus: RewardedAdStatus;
 };
 
 const AdContext = createContext<AdContextValue | null>(null);
-
-function configuredUnitId(kind: 'rewarded' | 'interstitial', sdk: GoogleMobileAdsSdk): string | null {
-  const testMode = __DEV__ || process.env.EXPO_PUBLIC_ADS_TEST_MODE === 'true';
-  if (testMode) return kind === 'rewarded' ? sdk.TestIds.REWARDED : sdk.TestIds.INTERSTITIAL;
-  if (Platform.OS === 'android') {
-    return kind === 'rewarded'
-      ? process.env.EXPO_PUBLIC_ADMOB_ANDROID_REWARDED_ID?.trim() || null
-      : process.env.EXPO_PUBLIC_ADMOB_ANDROID_INTERSTITIAL_ID?.trim() || null;
-  }
-  if (Platform.OS === 'ios') {
-    return kind === 'rewarded'
-      ? process.env.EXPO_PUBLIC_ADMOB_IOS_REWARDED_ID?.trim() || null
-      : process.env.EXPO_PUBLIC_ADMOB_IOS_INTERSTITIAL_ID?.trim() || null;
-  }
-  return null;
-}
 
 function NativeRewardedAdProvider({ children, sdk }: PropsWithChildren<{ sdk: GoogleMobileAdsSdk }>) {
 
@@ -71,6 +61,7 @@ function NativeRewardedAdProvider({ children, sdk }: PropsWithChildren<{ sdk: Go
     RewardedAdEventType,
   } = sdk;
   const [adsReady, setAdsReady] = useState(false);
+  const [rewardedStatus, setRewardedStatus] = useState<RewardedAdStatus>('idle');
   const [privacyOptionsRequired, setPrivacyOptionsRequired] = useState(false);
   const removeAds = useAdAccessStore((state) => state.removeAds);
   const activeRewarded = useRef<RewardedAd | null>(null);
@@ -78,13 +69,12 @@ function NativeRewardedAdProvider({ children, sdk }: PropsWithChildren<{ sdk: Go
   const interstitialLoaded = useRef(false);
   const rewardedResolver = useRef<((earned: boolean) => void) | null>(null);
   const showingRewarded = useRef(false);
-  const lastInterstitialAt = useRef(0);
+  const showingInterstitial = useRef(false);
+  const interstitialSession = useRef(createInterstitialSession());
 
   useEffect(() => {
     let active = true;
     const subscriptions: (() => void)[] = [];
-    lastInterstitialAt.current = Date.now();
-
     const prepareAds = async () => {
       try {
         const consent = await AdsConsent.requestInfoUpdate();
@@ -113,8 +103,8 @@ function NativeRewardedAdProvider({ children, sdk }: PropsWithChildren<{ sdk: Go
       }
 
       if (!active) return;
-      const rewardedUnitId = configuredUnitId('rewarded', sdk);
-      const interstitialUnitId = configuredUnitId('interstitial', sdk);
+      const rewardedUnitId = adUnitId('rewarded', sdk.TestIds);
+      const interstitialUnitId = adUnitId('interstitial', sdk.TestIds);
 
       if (interstitialUnitId) {
         const ad = InterstitialAd.createForAdRequest(interstitialUnitId, {
@@ -124,16 +114,27 @@ function NativeRewardedAdProvider({ children, sdk }: PropsWithChildren<{ sdk: Go
         subscriptions.push(
           ad.addAdEventListener(AdEventType.LOADED, () => {
             interstitialLoaded.current = true;
+            trackAdEvent('ad_loaded', { format: 'interstitial' });
           }),
           ad.addAdEventListener(AdEventType.OPENED, () => {
-            lastInterstitialAt.current = Date.now();
+            showingInterstitial.current = true;
+            interstitialSession.current = recordInterstitialShown(interstitialSession.current);
+            beginAdPresentation();
+            trackAdEvent('ad_displayed', { format: 'interstitial' });
+            trackAdEvent('interstitial_shown', { format: 'interstitial' });
           }),
           ad.addAdEventListener(AdEventType.CLOSED, () => {
+            endAdPresentation();
+            showingInterstitial.current = false;
             interstitialLoaded.current = false;
+            trackAdEvent('ad_dismissed', { format: 'interstitial' });
             ad.load();
           }),
           ad.addAdEventListener(AdEventType.ERROR, () => {
+            endAdPresentation();
+            showingInterstitial.current = false;
             interstitialLoaded.current = false;
+            trackAdEvent('ad_failed', { format: 'interstitial', code: 'sdk_error' });
           }),
         );
         ad.load();
@@ -160,8 +161,11 @@ function NativeRewardedAdProvider({ children, sdk }: PropsWithChildren<{ sdk: Go
   const showRewardedAd = useCallback(async (placement: string) => {
     if (showingRewarded.current) return false;
 
-    const rewardedUnitId = configuredUnitId('rewarded', sdk);
-    if (!rewardedUnitId) return false;
+    const rewardedUnitId = adUnitId('rewarded', sdk.TestIds);
+    if (!rewardedUnitId || showingInterstitial.current) {
+      setRewardedStatus('unavailable');
+      return false;
+    }
 
     let userId: string;
     try {
@@ -173,9 +177,12 @@ function NativeRewardedAdProvider({ children, sdk }: PropsWithChildren<{ sdk: Go
     }
 
     showingRewarded.current = true;
+    setRewardedStatus('loading');
+    trackAdEvent('ad_requested', { format: 'rewarded', placement });
     return new Promise<boolean>((resolve) => {
       let earned = false;
       let settled = false;
+      let presented = false;
       let loadTimeout: ReturnType<typeof setTimeout> | null = null;
       const unsubscribers: (() => void)[] = [];
       const ad = RewardedAd.createForAdRequest(
@@ -190,9 +197,14 @@ function NativeRewardedAdProvider({ children, sdk }: PropsWithChildren<{ sdk: Go
         if (loadTimeout) clearTimeout(loadTimeout);
         unsubscribers.forEach((unsubscribe) => unsubscribe());
         ad.destroy();
+        if (presented) endAdPresentation();
+        if (presented) interstitialSession.current = recordRewardedAd(interstitialSession.current);
         if (activeRewarded.current === ad) activeRewarded.current = null;
         showingRewarded.current = false;
         rewardedResolver.current = null;
+        setRewardedStatus(completed ? 'completed' : presented ? 'failed' : 'unavailable');
+        if (presented) trackAdEvent('ad_dismissed', { format: 'rewarded', placement });
+        if (!completed) trackAdEvent('ad_failed', { format: 'rewarded', placement, code: presented ? 'not_earned' : 'not_loaded' });
         resolve(completed);
       };
 
@@ -203,10 +215,17 @@ function NativeRewardedAdProvider({ children, sdk }: PropsWithChildren<{ sdk: Go
             clearTimeout(loadTimeout);
             loadTimeout = null;
           }
+          presented = true;
+          beginAdPresentation();
+          setRewardedStatus('showing');
+          trackAdEvent('ad_loaded', { format: 'rewarded', placement });
+          trackAdEvent('ad_displayed', { format: 'rewarded', placement });
           void ad.show().catch(() => finish(false));
         }),
         ad.addAdEventListener(RewardedAdEventType.EARNED_REWARD, () => {
+          if (earned) return;
           earned = true;
+          trackAdEvent('reward_earned', { format: 'rewarded', placement });
         }),
         ad.addAdEventListener(AdEventType.CLOSED, () => finish(earned)),
         ad.addAdEventListener(AdEventType.ERROR, () => finish(earned)),
@@ -218,15 +237,17 @@ function NativeRewardedAdProvider({ children, sdk }: PropsWithChildren<{ sdk: Go
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const showInterstitialIfEligible = useCallback(async () => {
-    if (removeAds) return false;
+  const showInterstitialIfEligible = useCallback(async (transition = 'major_transition') => {
+    interstitialSession.current = recordMeaningfulTransition(interstitialSession.current);
+    if (removeAds || showingRewarded.current || showingInterstitial.current) return false;
+    if (!canShowInterstitial(interstitialSession.current)) return false;
     const ad = interstitial.current;
     if (!ad || !interstitialLoaded.current) {
       ad?.load();
       return false;
     }
-    if (Date.now() - lastInterstitialAt.current < INTERSTITIAL_COOLDOWN_MS) return false;
     try {
+      trackAdEvent('ad_requested', { format: 'interstitial', placement: transition });
       await ad.show();
       return true;
     } catch {
@@ -254,7 +275,8 @@ function NativeRewardedAdProvider({ children, sdk }: PropsWithChildren<{ sdk: Go
     privacyOptionsRequired,
     adsReady,
     cashRewardsRequireServerClaim: true,
-  }), [adsReady, privacyOptionsRequired, showInterstitialIfEligible, showPrivacyOptions, showRewardedAd]);
+    rewardedStatus,
+  }), [adsReady, privacyOptionsRequired, rewardedStatus, showInterstitialIfEligible, showPrivacyOptions, showRewardedAd]);
 
   return <AdContext.Provider value={value}>{children}</AdContext.Provider>;
 }
@@ -263,11 +285,13 @@ function SimulatedRewardedAdProvider({ children }: PropsWithChildren) {
   const [visible, setVisible] = useState(false);
   const [seconds, setSeconds] = useState(5);
   const [placement, setPlacement] = useState('Reward');
+  const [rewardedStatus, setRewardedStatus] = useState<RewardedAdStatus>('idle');
   const running = useRef(false);
 
   const showRewardedAd = useCallback(async (nextPlacement: string) => {
     if (running.current) return false;
     running.current = true;
+    setRewardedStatus('showing');
     setPlacement(nextPlacement);
     setSeconds(5);
     setVisible(true);
@@ -277,6 +301,7 @@ function SimulatedRewardedAdProvider({ children }: PropsWithChildren) {
     }
     setVisible(false);
     running.current = false;
+    setRewardedStatus('completed');
     return true;
   }, []);
 
@@ -289,7 +314,8 @@ function SimulatedRewardedAdProvider({ children }: PropsWithChildren) {
     privacyOptionsRequired: false,
     adsReady: true,
     cashRewardsRequireServerClaim: false,
-  }), [showInterstitialIfEligible, showPrivacyOptions, showRewardedAd]);
+    rewardedStatus,
+  }), [rewardedStatus, showInterstitialIfEligible, showPrivacyOptions, showRewardedAd]);
 
   return (
     <AdContext.Provider value={value}>

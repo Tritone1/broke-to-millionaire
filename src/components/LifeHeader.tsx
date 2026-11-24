@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigation, type NavigationProp } from '@react-navigation/native';
-import { Pressable, StyleSheet, Text, View, type HostInstance } from 'react-native';
+import { Pressable, StyleSheet, View, type HostInstance } from 'react-native';
+import { Text } from './LocalizedText';
 import Animated, { useAnimatedStyle, useSharedValue, withSequence, withSpring } from 'react-native-reanimated';
 import { useShallow } from 'zustand/react/shallow';
 

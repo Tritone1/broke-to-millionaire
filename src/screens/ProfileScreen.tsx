@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Alert, Linking, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
+import { Alert, Linking, ScrollView, StyleSheet, Switch, View } from 'react-native';
+import { Text } from '../components/LocalizedText';
 import { CommonActions, useNavigation } from '@react-navigation/native';
 
 import { LIFESTYLE_ITEMS } from '../data/shop';
@@ -171,7 +172,7 @@ export function ProfileScreen() {
           <View style={styles.divider} />
           <View style={styles.setting}><Text style={styles.settingText}>📳 Haptics</Text><Switch value={state.settings.haptics} onValueChange={(haptics) => void session.updateSettings({ haptics })} trackColor={{ false: colors.border, true: colors.greenDark }} thumbColor={colors.green} /></View>
           <View style={styles.divider} />
-          <View style={styles.setting}><Text style={styles.settingText}>🌐 {t('language')}</Text><AppButton variant="ghost" onPress={() => setLanguageOpen(true)} style={styles.languageButton}>{languageOption(state.settings.language).flag} {languageOption(state.settings.language).nativeName}</AppButton></View>
+          <View style={styles.setting}><Text style={styles.settingText}>🌐 {t('language')}</Text><AppButton variant="ghost" onPress={() => setLanguageOpen(true)} style={styles.languageButton}>{languageOption(session.settings.language).flag} {languageOption(session.settings.language).nativeName}</AppButton></View>
           {privacyOptionsRequired ? <><View style={styles.divider} /><AppButton variant="ghost" onPress={() => void showPrivacyOptions()} style={styles.button}>ADVERTISEMENT PRIVACY OPTIONS</AppButton></> : null}
         </Card>
         <Card style={styles.legalCard}>
@@ -185,7 +186,7 @@ export function ProfileScreen() {
         <AppButton variant="danger" onPress={reset} style={styles.reset}>RESET SAVE</AppButton>
         <Text style={styles.version}>Rich Simulator • Save v{state.saveVersion}</Text>
       </ScrollView>
-      <LanguagePickerModal visible={languageOpen} selected={state.settings.language} onSelect={(language) => void session.chooseLanguage(language)} onClose={() => setLanguageOpen(false)} />
+      <LanguagePickerModal visible={languageOpen} selected={session.settings.language} onSelect={(language) => void session.chooseLanguage(language)} onClose={() => setLanguageOpen(false)} />
     </Screen>
   );
 }

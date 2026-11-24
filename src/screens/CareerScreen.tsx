@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Text } from '../components/LocalizedText';
 import { useShallow } from 'zustand/react/shallow';
 
 import { COURSES, type SkillName } from '../data/courses';

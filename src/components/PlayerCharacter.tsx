@@ -6,12 +6,12 @@ import { CHARACTER_ART, HAIRSTYLES, normalizeHairstyleForGender } from '../data/
 import { AVATAR_ANCHORS, AVATAR_CANVAS, AVATAR_FULL_ANCHORS, type AvatarLayerName } from '../data/avatarAnchors';
 import { AVATAR_REQUIRED_LAYERS } from '../data/avatarAnchors';
 import { atomicAssetSetReady, emptyAtomicAssetState, updateAtomicAssetState } from '../game/atomicAssetSet';
-import { AVATAR_ATLAS, avatarAppearanceKey, ethnicityColumn, genderRow, skinToneIndex } from '../game/avatarRig';
+import { avatarAppearanceKey, ethnicityColumn, genderRow, skinToneIndex } from '../game/avatarRig';
 import { avatarAssetSetForAppearance, preloadAvatarAssetsForAppearance } from '../services/avatarAssets';
 import { imageSourceKey, markImageSourceDecoded, preloadImageSource } from '../services/imageAssetCache';
 import type { CharacterProfile } from '../store/lifeStore';
 
-type UnifiedArt = Pick<typeof CHARACTER_ART.portraitUnified, 'clothing' | 'necklineFront' | 'hairBack' | 'hairFront' | 'headAtlases' | 'neckAtlases'>;
+type UnifiedArt = Pick<typeof CHARACTER_ART.portraitUnified, 'clothing' | 'necklineFront' | 'hairBack' | 'hairFront' | 'headLayers' | 'neckLayers'>;
 type CharacterRenderMode = 'portrait' | 'preview' | 'scene' | 'full-body';
 
 const AtlasLayer = memo(function AtlasLayer({ source, columns, rows, column, row, colorToken, tokenOpacity = 0, debugTint, layerName, fallbackSource, fallbackColumn = column, fallbackRow = row, onReady, onFailure }: {
@@ -110,8 +110,11 @@ const UnifiedLayers = memo(function UnifiedLayers({ character, art, portrait, de
   const hairTintOpacity = character.avatar.hairColor.toLowerCase() === '#2a1a12' ? 0 : 0.16;
   const outfitTintOpacity = character.avatar.outfitColor.toLowerCase() === '#176b42' ? 0 : 0.12;
   const hairBack = art.hairBack[hairIndex]!;
-  const headAndEars = art.headAtlases[skinIndex] ?? art.headAtlases[2]!;
-  const neck = art.neckAtlases[skinIndex] ?? art.neckAtlases[2]!;
+  const fallbackEthnicity = ethnicityColumn('european');
+  const fallbackHead = art.headLayers[2]![fallbackEthnicity]!;
+  const fallbackNeck = art.neckLayers[2]![fallbackEthnicity]!;
+  const headAndEars = art.headLayers[skinIndex]?.[ethnicity] ?? fallbackHead;
+  const neck = art.neckLayers[skinIndex]?.[ethnicity] ?? fallbackNeck;
   const outfitBack = art.clothing;
   const outfitFront = art.necklineFront;
   const hairFront = art.hairFront[hairIndex]!;
@@ -119,9 +122,9 @@ const UnifiedLayers = memo(function UnifiedLayers({ character, art, portrait, de
     <>
       <CanvasLayer key={`hair-back-${imageSourceKey(hairBack)}`} layerName="hairBack" source={hairBack} colorToken={character.avatar.hairColor} tokenOpacity={hairTintOpacity} debugTint={debugLayers ? '#2563EB' : undefined} onReady={onLayerReady} onFailure={onLayerFailure} />
       <AtlasLayer key={`outfit-back-${imageSourceKey(outfitBack)}`} layerName="outfitBack" source={outfitBack} columns={2} rows={1} column={gender} row={0} colorToken={character.avatar.outfitColor} tokenOpacity={outfitTintOpacity} debugTint={debugLayers ? '#22C55E' : undefined} onReady={onLayerReady} onFailure={onLayerFailure} />
-      <AtlasLayer key={`neck-${imageSourceKey(neck)}`} layerName="neck" source={neck} fallbackSource={art.neckAtlases[2]} fallbackColumn={ethnicityColumn('european')} fallbackRow={gender} columns={AVATAR_ATLAS.ethnicityColumns} rows={2} column={ethnicity} row={gender} debugTint={debugLayers ? '#FACC15' : undefined} onReady={onLayerReady} onFailure={onLayerFailure} />
+      <AtlasLayer key={`neck-${imageSourceKey(neck)}`} layerName="neck" source={neck} fallbackSource={fallbackNeck} fallbackColumn={0} fallbackRow={gender} columns={1} rows={2} column={0} row={gender} debugTint={debugLayers ? '#FACC15' : undefined} onReady={onLayerReady} onFailure={onLayerFailure} />
       <AtlasLayer key={`outfit-front-${imageSourceKey(outfitFront)}`} layerName="outfitFront" source={outfitFront} columns={2} rows={1} column={gender} row={0} debugTint={debugLayers ? '#EC4899' : undefined} onReady={onLayerReady} onFailure={onLayerFailure} />
-      <AtlasLayer key={`head-${imageSourceKey(headAndEars)}`} layerName="headAndEars" source={headAndEars} fallbackSource={art.headAtlases[2]} fallbackColumn={ethnicityColumn('european')} fallbackRow={gender} columns={AVATAR_ATLAS.ethnicityColumns} rows={2} column={ethnicity} row={gender} debugTint={debugLayers ? '#F97316' : undefined} onReady={onLayerReady} onFailure={onLayerFailure} />
+      <AtlasLayer key={`head-${imageSourceKey(headAndEars)}`} layerName="headAndEars" source={headAndEars} fallbackSource={fallbackHead} fallbackColumn={0} fallbackRow={gender} columns={1} rows={2} column={0} row={gender} debugTint={debugLayers ? '#F97316' : undefined} onReady={onLayerReady} onFailure={onLayerFailure} />
       <CanvasLayer key={`hair-front-${imageSourceKey(hairFront)}`} layerName="hairFront" source={hairFront} colorToken={character.avatar.hairColor} tokenOpacity={hairTintOpacity} debugTint={debugLayers ? '#A855F7' : undefined} onReady={onLayerReady} onFailure={onLayerFailure} />
       {showAnchors ? <AvatarDebugOverlay portrait={portrait} /> : null}
     </>
@@ -147,9 +150,10 @@ export const PlayerCharacter = memo(function PlayerCharacter({ character, style,
   const female = character.gender === 'female';
   const portrait = mode === 'portrait';
   const assetGender = character.gender;
+  const assetEthnicity = character.ethnicity;
   const assetSkin = character.avatar.skin;
   const hairIndex = normalizeHairstyleForGender(character.avatar.hairStyle, character.gender);
-  const sources = useMemo(() => avatarAssetSetForAppearance(assetGender, assetSkin, hairIndex, portrait ? 'portrait' : 'full'), [assetGender, assetSkin, hairIndex, portrait]);
+  const sources = useMemo(() => avatarAssetSetForAppearance(assetGender, assetEthnicity, assetSkin, hairIndex, portrait ? 'portrait' : 'full'), [assetEthnicity, assetGender, assetSkin, hairIndex, portrait]);
   const appearance = avatarAppearanceKey(character);
   const signature = useMemo(() => `${portrait ? 'portrait' : 'full'}:${appearance}:${AVATAR_REQUIRED_LAYERS.map((layer) => `${layer}=${imageSourceKey(sources[layer])}`).join('|')}`, [appearance, portrait, sources]);
   const [assetState, setAssetState] = useState(() => emptyAtomicAssetState(signature));
@@ -168,9 +172,9 @@ export const PlayerCharacter = memo(function PlayerCharacter({ character, style,
         if (active && loaded) layerReady(layer, source);
       });
     }
-    if (portrait) void preloadAvatarAssetsForAppearance(assetGender, assetSkin, hairIndex, 'full');
+    if (portrait) void preloadAvatarAssetsForAppearance(assetGender, assetEthnicity, assetSkin, hairIndex, 'full');
     return () => { active = false; };
-  }, [assetGender, assetSkin, hairIndex, layerReady, portrait, sources]);
+  }, [assetEthnicity, assetGender, assetSkin, hairIndex, layerReady, portrait, sources]);
   const ready = atomicAssetSetReady(assetState, signature, AVATAR_REQUIRED_LAYERS);
   return (
     <View accessibilityLabel={`${character.name}, ${female ? 'female' : 'male'}, ${HAIRSTYLES[hairIndex]}`} accessibilityState={{ busy: !ready }} style={[styles.character, style]}>

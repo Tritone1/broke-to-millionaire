@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { CommonActions, useNavigation } from '@react-navigation/native';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
+import { Text } from '../LocalizedText';
 import Animated, { useAnimatedStyle, useSharedValue, withRepeat, withSequence, withSpring, withTiming } from 'react-native-reanimated';
 import { useTranslation } from '../../hooks/useTranslation';
 

@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Modal, Pressable, StyleSheet, View } from 'react-native';
+import { Text } from './LocalizedText';
 
 import { formatBig, compare } from '../game/BigNumber';
 import { GAME_MONTH_SECONDS } from '../game/config';

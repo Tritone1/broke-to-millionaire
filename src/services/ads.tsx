@@ -1,15 +1,17 @@
 import { createContext, useCallback, useContext, useMemo, useRef, useState, type PropsWithChildren } from 'react';
-import { Modal, StyleSheet, Text, View } from 'react-native';
+import { Modal, StyleSheet, View } from 'react-native';
+import { Text } from '../components/LocalizedText';
 
 import { colors } from '../theme';
 
 type AdContextValue = {
   showRewardedAd: (placement: string) => Promise<boolean>;
-  showInterstitialIfEligible: () => Promise<boolean>;
+  showInterstitialIfEligible: (transition?: string) => Promise<boolean>;
   showPrivacyOptions: () => Promise<void>;
   privacyOptionsRequired: boolean;
   adsReady: boolean;
   cashRewardsRequireServerClaim: boolean;
+  rewardedStatus: 'idle' | 'loading' | 'showing' | 'completed' | 'failed' | 'unavailable';
 };
 
 const AdContext = createContext<AdContextValue | null>(null);
@@ -18,11 +20,13 @@ export function RewardedAdProvider({ children }: PropsWithChildren) {
   const [visible, setVisible] = useState(false);
   const [seconds, setSeconds] = useState(5);
   const [placement, setPlacement] = useState('Reward');
+  const [rewardedStatus, setRewardedStatus] = useState<AdContextValue['rewardedStatus']>('idle');
   const running = useRef(false);
 
   const showRewardedAd = useCallback(async (nextPlacement: string) => {
     if (running.current) return false;
     running.current = true;
+    setRewardedStatus('showing');
     setPlacement(nextPlacement);
     setSeconds(5);
     setVisible(true);
@@ -32,6 +36,7 @@ export function RewardedAdProvider({ children }: PropsWithChildren) {
     }
     setVisible(false);
     running.current = false;
+    setRewardedStatus('completed');
     return true;
   }, []);
 
@@ -45,7 +50,8 @@ export function RewardedAdProvider({ children }: PropsWithChildren) {
     privacyOptionsRequired: false,
     adsReady: true,
     cashRewardsRequireServerClaim: false,
-  }), [showInterstitialIfEligible, showPrivacyOptions, showRewardedAd]);
+    rewardedStatus,
+  }), [rewardedStatus, showInterstitialIfEligible, showPrivacyOptions, showRewardedAd]);
 
   return (
     <AdContext.Provider value={value}>

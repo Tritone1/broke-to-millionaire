@@ -7,13 +7,50 @@ const characterDir = path.join(root, 'assets', 'game', 'characters');
 const layout = require(path.join(root, 'src', 'data', 'avatarAnchorData.json'));
 const CELL = layout.canvas.width;
 const FULL_HEIGHT = layout.canvas.fullHeight;
+const scaleArgument = process.argv.find((argument) => argument.startsWith('--scale='));
+const OUTPUT_SCALE = Number(scaleArgument?.split('=')[1] ?? 1);
+
+if (![1, 2].includes(OUTPUT_SCALE)) {
+  throw new Error('Avatar output scale must be 1 or 2.');
+}
+
+function outputName(name) {
+  if (OUTPUT_SCALE === 1) return name;
+  const extension = path.extname(name);
+  return `${name.slice(0, -extension.length)}@${OUTPUT_SCALE}x${extension}`;
+}
+
+function createOutput(width, height) {
+  return new PNG({ width: width * OUTPUT_SCALE, height: height * OUTPUT_SCALE });
+}
+
+function physicalSourceRect(rect) {
+  return {
+    x: rect.x * OUTPUT_SCALE,
+    y: rect.y * OUTPUT_SCALE,
+    width: rect.width * OUTPUT_SCALE,
+    height: rect.height * OUTPUT_SCALE,
+  };
+}
 
 function read(name) {
   return PNG.sync.read(fs.readFileSync(path.join(characterDir, name)));
 }
 
 function write(name, image) {
-  fs.writeFileSync(path.join(characterDir, name), PNG.sync.write(image));
+  fs.writeFileSync(path.join(characterDir, outputName(name)), PNG.sync.write(image));
+}
+
+function extractAtlasColumn(source, column, logicalCellWidth) {
+  const cellWidth = logicalCellWidth * OUTPUT_SCALE;
+  const output = new PNG({ width: cellWidth, height: source.height });
+  const sourceX = column * cellWidth;
+  for (let y = 0; y < source.height; y += 1) {
+    const sourceStart = (y * source.width + sourceX) * 4;
+    const destinationStart = y * output.width * 4;
+    source.data.copy(output.data, destinationStart, sourceStart, sourceStart + cellWidth * 4);
+  }
+  return output;
 }
 
 function sample(source, x, y) {
@@ -55,21 +92,25 @@ function opaqueInteriorAbove(source, sourceRect, sourceX, sourceY) {
 }
 
 function drawScaled(source, sourceRect, destination, destinationRect, cellOffsetX = 0, cellOffsetY = 0, includePixel = null, cellHeight = CELL, sampleOptions = null) {
-  const startX = Math.max(0, Math.floor(destinationRect.x));
-  const startY = Math.max(0, Math.floor(destinationRect.y));
-  const endX = Math.min(CELL, Math.ceil(destinationRect.x + destinationRect.width));
+  const startX = Math.max(0, Math.floor(destinationRect.x * OUTPUT_SCALE));
+  const startY = Math.max(0, Math.floor(destinationRect.y * OUTPUT_SCALE));
+  const endX = Math.min(CELL * OUTPUT_SCALE, Math.ceil((destinationRect.x + destinationRect.width) * OUTPUT_SCALE));
   const destinationBottom = destinationRect.y + destinationRect.height;
   const extendedBottom = sampleOptions?.extendTransparentFromAbove ? Math.max(destinationBottom, sampleOptions.endY + 1) : destinationBottom;
-  const endY = Math.min(cellHeight, Math.ceil(extendedBottom));
-  for (let y = startY; y < endY; y += 1) {
-    for (let x = startX; x < endX; x += 1) {
-      const inclusion = includePixel ? includePixel(x, y) : 1;
+  const endY = Math.min(cellHeight * OUTPUT_SCALE, Math.ceil(extendedBottom * OUTPUT_SCALE));
+  for (let outputY = startY; outputY < endY; outputY += 1) {
+    const sampleY = (outputY + 0.5) / OUTPUT_SCALE;
+    const maskY = OUTPUT_SCALE === 1 ? outputY : sampleY;
+    for (let outputX = startX; outputX < endX; outputX += 1) {
+      const sampleX = (outputX + 0.5) / OUTPUT_SCALE;
+      const maskX = OUTPUT_SCALE === 1 ? outputX : sampleX;
+      const inclusion = includePixel ? includePixel(maskX, maskY) : 1;
       if (!inclusion) continue;
-      const u = (x + 0.5 - destinationRect.x) / destinationRect.width;
-      const v = (y + 0.5 - destinationRect.y) / destinationRect.height;
+      const u = (sampleX - destinationRect.x) / destinationRect.width;
+      const v = (sampleY - destinationRect.y) / destinationRect.height;
       const sourceX = sourceRect.x + Math.max(0, Math.min(1, u)) * Math.max(0, sourceRect.width - 1);
       let sourceY = sourceRect.y + Math.max(0, Math.min(1, v)) * Math.max(0, sourceRect.height - 1);
-      if (sampleOptions?.extendTransparentFromAbove && y >= sampleOptions.extensionStartY) {
+      if (sampleOptions?.extendTransparentFromAbove && maskY >= sampleOptions.extensionStartY) {
         const heldV = (sampleOptions.extensionSampleY + 0.5 - destinationRect.y) / destinationRect.height;
         sourceY = sourceRect.y + Math.max(0, Math.min(1, heldV)) * Math.max(0, sourceRect.height - 1);
       }
@@ -79,7 +120,7 @@ function drawScaled(source, sourceRect, destination, destinationRect, cellOffset
       }
       if (rgba[3] === 0) continue;
       if (typeof inclusion === 'number' && inclusion < 1) rgba[3] = Math.round(rgba[3] * inclusion);
-      setPixel(destination, cellOffsetX + x, cellOffsetY + y, rgba);
+      setPixel(destination, cellOffsetX * OUTPUT_SCALE + outputX, cellOffsetY * OUTPUT_SCALE + outputY, rgba);
     }
   }
 }
@@ -123,17 +164,20 @@ function paintPortraitHoodInterior(destination, cellOffsetX, gender) {
     : layout.genderAnchors[gender].chin + 4;
   const endY = layout.anchors.shirtNeckline.y + 8;
   const color = gender === 'female' ? [8, 76, 96] : [12, 67, 73];
-  for (let y = startY; y <= endY; y += 1) {
+  for (let outputY = Math.floor(startY * OUTPUT_SCALE); outputY <= Math.ceil(endY * OUTPUT_SCALE); outputY += 1) {
+    const y = OUTPUT_SCALE === 1 ? outputY : (outputY + 0.5) / OUTPUT_SCALE;
     const progress = (y - startY) / Math.max(1, endY - startY);
     const halfWidth = gender === 'male'
       ? 136 - progress * 28
       : 72 + progress * 64;
-    for (let x = Math.floor(centerX - halfWidth); x <= Math.ceil(centerX + halfWidth); x += 1) {
-      const destinationIndex = (y * destination.width + cellOffsetX + x) * 4;
+    for (let outputX = Math.floor((centerX - halfWidth) * OUTPUT_SCALE); outputX <= Math.ceil((centerX + halfWidth) * OUTPUT_SCALE); outputX += 1) {
+      const x = OUTPUT_SCALE === 1 ? outputX : (outputX + 0.5) / OUTPUT_SCALE;
+      const destinationX = cellOffsetX * OUTPUT_SCALE + outputX;
+      const destinationIndex = (outputY * destination.width + destinationX) * 4;
       if (destination.data[destinationIndex + 3] > 12) continue;
       const edgeDistance = halfWidth - Math.abs(x - centerX);
       const alpha = Math.round(255 * Math.max(0, Math.min(1, edgeDistance / 4)));
-      setPixel(destination, cellOffsetX + x, y, [...color, alpha]);
+      setPixel(destination, destinationX, outputY, [...color, alpha]);
     }
   }
 }
@@ -197,10 +241,10 @@ function ethnicityFacePlacement(base, column) {
 function buildHeadAtlases() {
   for (let skin = 0; skin < 6; skin += 1) {
     const source = read(`head_atlas_v3_skin_${skin}.png`);
-    const portrait = new PNG({ width: CELL * 6, height: CELL * 2 });
-    const portraitNeck = new PNG({ width: CELL * 6, height: CELL * 2 });
-    const full = new PNG({ width: CELL * 6, height: FULL_HEIGHT * 2 });
-    const fullNeck = new PNG({ width: CELL * 6, height: FULL_HEIGHT * 2 });
+    const portrait = createOutput(CELL * 6, CELL * 2);
+    const portraitNeck = createOutput(CELL * 6, CELL * 2);
+    const full = createOutput(CELL * 6, FULL_HEIGHT * 2);
+    const fullNeck = createOutput(CELL * 6, FULL_HEIGHT * 2);
     for (let row = 0; row < 2; row += 1) {
       for (let column = 0; column < 6; column += 1) {
         const sourceRect = headCellRect(source, column, row);
@@ -269,6 +313,15 @@ function buildHeadAtlases() {
     write(`avatar_portrait_neck_v8_skin_${skin}.png`, portraitNeck);
     write(`avatar_full_head_skin_${skin}.png`, full);
     write(`avatar_full_neck_skin_${skin}.png`, fullNeck);
+    // Runtime images are split by ethnicity. A 2x six-column atlas is 6144px
+    // wide, which exceeds the safe texture size on some Android GPUs and
+    // decodes to far more memory than one selected avatar needs.
+    for (let ethnicity = 0; ethnicity < 6; ethnicity += 1) {
+      write(`avatar_portrait_head_v8_skin_${skin}_ethnicity_${ethnicity}.png`, extractAtlasColumn(portrait, ethnicity, CELL));
+      write(`avatar_portrait_neck_v8_skin_${skin}_ethnicity_${ethnicity}.png`, extractAtlasColumn(portraitNeck, ethnicity, CELL));
+      write(`avatar_full_head_skin_${skin}_ethnicity_${ethnicity}.png`, extractAtlasColumn(full, ethnicity, CELL));
+      write(`avatar_full_neck_skin_${skin}_ethnicity_${ethnicity}.png`, extractAtlasColumn(fullNeck, ethnicity, CELL));
+    }
   }
 }
 
@@ -386,16 +439,16 @@ function buildHairAtlases() {
   const sourceCellWidth = source.width / 6;
   const atlases = {
     male: {
-      portraitBack: new PNG({ width: CELL * 3, height: CELL }),
-      portraitFront: new PNG({ width: CELL * 3, height: CELL }),
-      fullBack: new PNG({ width: CELL * 3, height: FULL_HEIGHT }),
-      fullFront: new PNG({ width: CELL * 3, height: FULL_HEIGHT }),
+      portraitBack: createOutput(CELL * 3, CELL),
+      portraitFront: createOutput(CELL * 3, CELL),
+      fullBack: createOutput(CELL * 3, FULL_HEIGHT),
+      fullFront: createOutput(CELL * 3, FULL_HEIGHT),
     },
     female: {
-      portraitBack: new PNG({ width: CELL * 3, height: CELL }),
-      portraitFront: new PNG({ width: CELL * 3, height: CELL }),
-      fullBack: new PNG({ width: CELL * 3, height: FULL_HEIGHT }),
-      fullFront: new PNG({ width: CELL * 3, height: FULL_HEIGHT }),
+      portraitBack: createOutput(CELL * 3, CELL),
+      portraitFront: createOutput(CELL * 3, CELL),
+      fullBack: createOutput(CELL * 3, FULL_HEIGHT),
+      fullFront: createOutput(CELL * 3, FULL_HEIGHT),
     },
   };
   for (const [row, gender] of ['male', 'female'].entries()) {
@@ -417,8 +470,8 @@ function buildHairAtlases() {
       const portraitFrontMask = combineMasks(portraitEdgeMask, frontMask(portraitMaskStyle, layout.headPlacement));
       drawScaled(portraitSource, portraitSourceRect, atlas.portraitBack, portraitDestination, localColumn * CELL, 0, portraitEdgeMask);
       drawScaled(portraitSource, portraitSourceRect, atlas.portraitFront, portraitDestination, localColumn * CELL, 0, portraitFrontMask);
-      const portraitBackLayer = new PNG({ width: CELL, height: CELL });
-      const portraitFrontLayer = new PNG({ width: CELL, height: CELL });
+      const portraitBackLayer = createOutput(CELL, CELL);
+      const portraitFrontLayer = createOutput(CELL, CELL);
       drawScaled(portraitSource, portraitSourceRect, portraitBackLayer, portraitDestination, 0, 0, portraitEdgeMask);
       drawScaled(portraitSource, portraitSourceRect, portraitFrontLayer, portraitDestination, 0, 0, portraitFrontMask);
       write(`avatar_portrait_hair_back_v7_${style.id}.png`, portraitBackLayer);
@@ -442,8 +495,8 @@ function buildHairAtlases() {
         : sourceRect;
       drawScaled(fullSource, fullSourceRect, atlas.fullBack, destination, localColumn * CELL, 0, fullEdgeMask, FULL_HEIGHT);
       drawScaled(fullSource, fullSourceRect, atlas.fullFront, destination, localColumn * CELL, 0, fullFrontMask, FULL_HEIGHT);
-      const fullBackLayer = new PNG({ width: CELL, height: FULL_HEIGHT });
-      const fullFrontLayer = new PNG({ width: CELL, height: FULL_HEIGHT });
+      const fullBackLayer = createOutput(CELL, FULL_HEIGHT);
+      const fullFrontLayer = createOutput(CELL, FULL_HEIGHT);
       drawScaled(fullSource, fullSourceRect, fullBackLayer, destination, 0, 0, fullEdgeMask, FULL_HEIGHT);
       drawScaled(fullSource, fullSourceRect, fullFrontLayer, destination, 0, 0, fullFrontMask, FULL_HEIGHT);
       write(`avatar_full_hair_back_v4_${style.id}.png`, fullBackLayer);
@@ -457,6 +510,7 @@ function buildHairAtlases() {
     write(`avatar_full_hair_back_v4_${gender}.png`, atlas.fullBack);
     write(`avatar_full_hair_front_v4_${gender}.png`, atlas.fullFront);
   }
+  if (OUTPUT_SCALE !== 1) return;
   const visibleBounds = layout.hairstyles.map((style, sourceColumn) => {
     const gender = sourceColumn < 3 ? 'male' : 'female';
     const portraitBack = atlases[gender].portraitBack;
@@ -499,10 +553,10 @@ function buildHairAtlases() {
 }
 
 function buildClothingAtlases() {
-  const portrait = new PNG({ width: CELL * 2, height: CELL });
-  const portraitNecklineFront = new PNG({ width: CELL * 2, height: CELL });
-  const full = new PNG({ width: CELL * 2, height: FULL_HEIGHT });
-  const fullNecklineFront = new PNG({ width: CELL * 2, height: FULL_HEIGHT });
+  const portrait = createOutput(CELL * 2, CELL);
+  const portraitNecklineFront = createOutput(CELL * 2, CELL);
+  const full = createOutput(CELL * 2, FULL_HEIGHT);
+  const fullNecklineFront = createOutput(CELL * 2, FULL_HEIGHT);
   const portraitFiles = ['portrait_shoulders_male_v4.png', 'portrait_shoulders_female_v1.png'];
   const fullFiles = ['player_body_male_v2.png', 'player_body_female_v2.png'];
   for (let gender = 0; gender < 2; gender += 1) {
@@ -516,11 +570,11 @@ function buildClothingAtlases() {
   for (let gender = 0; gender < 2; gender += 1) {
     const genderName = gender === 1 ? 'female' : 'male';
     const portraitFrontFit = { ...layout.portraitNecklineFront[genderName], startY: layout.outfits.casual[genderName].collarTopY };
-    drawScaled(portrait, { x: gender * CELL, y: 0, width: CELL, height: CELL }, portraitNecklineFront, { x: 0, y: 0, width: CELL, height: CELL }, gender * CELL, 0, necklineForegroundMask(portraitFrontFit));
+    drawScaled(portrait, physicalSourceRect({ x: gender * CELL, y: 0, width: CELL, height: CELL }), portraitNecklineFront, { x: 0, y: 0, width: CELL, height: CELL }, gender * CELL, 0, necklineForegroundMask(portraitFrontFit));
     // The revised male hoodie includes its own shallow, curved lining. The
     // female source still needs the generated rear lining behind the neck.
     if (genderName === 'female') paintPortraitHoodInterior(portrait, gender * CELL, genderName);
-    drawScaled(full, { x: gender * CELL, y: 0, width: CELL, height: FULL_HEIGHT }, fullNecklineFront, { x: 0, y: 0, width: CELL, height: FULL_HEIGHT }, gender * CELL, 0, necklineForegroundMask(layout.fullNecklineFront[genderName]), FULL_HEIGHT);
+    drawScaled(full, physicalSourceRect({ x: gender * CELL, y: 0, width: CELL, height: FULL_HEIGHT }), fullNecklineFront, { x: 0, y: 0, width: CELL, height: FULL_HEIGHT }, gender * CELL, 0, necklineForegroundMask(layout.fullNecklineFront[genderName]), FULL_HEIGHT);
   }
   write('avatar_portrait_clothing_v8.png', portrait);
   write('avatar_portrait_neckline_front_v8.png', portraitNecklineFront);
@@ -531,4 +585,4 @@ function buildClothingAtlases() {
 buildHeadAtlases();
 buildHairAtlases();
 buildClothingAtlases();
-process.stdout.write('Built unified portrait and full-body avatar canvases.\n');
+process.stdout.write(`Built unified portrait and full-body avatar canvases at ${OUTPUT_SCALE}x.\n`);

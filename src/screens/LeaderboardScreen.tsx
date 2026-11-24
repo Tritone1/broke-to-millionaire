@@ -1,4 +1,5 @@
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, View } from 'react-native';
+import { Text } from '../components/LocalizedText';
 
 import { MOCK_LEADERS, type LeaderboardEntry } from '../data/leaderboard';
 import { add, big, formatBig, toNumber } from '../game/BigNumber';

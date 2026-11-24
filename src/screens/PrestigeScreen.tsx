@@ -1,4 +1,5 @@
-import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, ScrollView, StyleSheet, View } from 'react-native';
+import { Text } from '../components/LocalizedText';
 
 import { formatBig } from '../game/BigNumber';
 import { legacyMultiplier, prestigePointsForLifetime } from '../game/formulas';

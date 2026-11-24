@@ -7,6 +7,7 @@ import { preloadAvatarAssets } from '../services/avatarAssets';
 import { preloadImageSource } from '../services/imageAssetCache';
 import { deleteLifeSlot, listLifeSlots, loadGlobalSettings, loadLifeSlot, saveGlobalSettings, saveLifeSlot, type SlotId } from '../services/lifeStorage';
 import { calculateLifeNetWorth, selectLifePersistedState, useLifeStore, type CharacterProfile, type LifePersistedState, type LifeSettings } from './lifeStore';
+import { useLocalizationStore } from './localizationStore';
 
 export type SlotSummary = { slot: SlotId; name: string; age: number; netWorth: string; playSeconds: number; savedAt: number };
 type SessionPhase = 'boot' | 'language' | 'menu' | 'setup' | 'game' | 'settings' | 'help';
@@ -60,13 +61,15 @@ export const useSessionStore = create<SessionStore>((set, get) => ({
   bootstrap: async () => {
     try {
       const [states, settings] = await Promise.all([listLifeSlots(), loadGlobalSettings()]);
-      useLifeStore.getState().updateSettings(settings);
       const normalized = { ...settings, language: isLanguage(settings.language) ? settings.language : 'en' as const };
+      useLocalizationStore.getState().setLanguage(normalized.language);
+      useLifeStore.getState().updateSettings(normalized);
       set({ slots: summaries(states), settings: normalized, phase: normalized.languageChosen ? 'menu' : 'language' });
     } catch (error) {
       // eslint-disable-next-line no-console
       console.error('Failed to bootstrap session store', error);
       const fallbackSettings = { sound: true, haptics: true, language: 'en', languageChosen: false } as const;
+      useLocalizationStore.getState().setLanguage(fallbackSettings.language);
       useLifeStore.getState().updateSettings(fallbackSettings);
       set({ slots: {}, settings: fallbackSettings, phase: 'language' });
     }
@@ -114,12 +117,14 @@ export const useSessionStore = create<SessionStore>((set, get) => ({
   updateSettings: async (patch) => {
     const settings = { ...get().settings, ...patch };
     set({ settings });
+    useLocalizationStore.getState().setLanguage(settings.language);
     useLifeStore.getState().updateSettings(settings);
     await saveGlobalSettings(settings);
   },
   chooseLanguage: async (language) => {
     const settings = { ...get().settings, language, languageChosen: true };
     set({ settings, phase: get().phase === 'language' ? 'menu' : get().phase });
+    useLocalizationStore.getState().setLanguage(language);
     useLifeStore.getState().updateSettings(settings);
     await saveGlobalSettings(settings);
   },

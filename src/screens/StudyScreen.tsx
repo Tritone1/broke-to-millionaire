@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, ScrollView, StyleSheet, View } from 'react-native';
+import { Text } from '../components/LocalizedText';
 import { CommonActions, useNavigation } from '@react-navigation/native';
 
 import { AppButton } from '../components/AppButton';

@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { CommonActions, useNavigation } from '@react-navigation/native';
 import * as Haptics from 'expo-haptics';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
+import { Text } from '../components/LocalizedText';
 import Animated, { useAnimatedStyle, useSharedValue, withSequence, withSpring, withTiming } from 'react-native-reanimated';
 
 import { LifeHeader } from '../components/LifeHeader';

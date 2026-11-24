@@ -2,7 +2,7 @@
   "expo": {
     "name": "Broke to Millionaire",
     "slug": "rich-simulator",
-    "version": "1.0.1",
+    "version": "1.0.5",
     "orientation": "portrait",
     "icon": "./assets/release/app-icon.png",
     "userInterfaceStyle": "light",
@@ -16,6 +16,7 @@
       }
     },
     "android": {
+      "versionCode": 19,
       "package": "com.kanan.richsimulator",
       "adaptiveIcon": {
         "backgroundColor": "#F2E5CA",

@@ -36,7 +36,7 @@ import { annualFeesAndRepairs, calculateMonthlyBills, careerOperatingCost, costO
 import { advanceMarket, averagePriceAfterBuy, createMarketSnapshot, type MarketNews } from '../game/marketEngine';
 import { nextRandom } from '../game/random';
 
-export const LIFE_SAVE_VERSION = 15;
+export const LIFE_SAVE_VERSION = 16;
 export const BROKER_FEE = 0.005;
 
 export type Skills = Record<SkillName, number>;
@@ -186,6 +186,9 @@ export type LifePersistedState = {
   lastSeenTimestamp: number;
   lastSavedAt: number;
   nextLifeEventAt: number;
+  adRewardCooldowns: Partial<Record<'energy' | 'salary' | 'opportunity', number>>;
+  nextWorkShiftMultiplier: 1 | 1.25;
+  extraOpportunityCredits: number;
   tutorialStep: 0 | 1 | 2 | 3;
 };
 
@@ -201,6 +204,9 @@ type LifeStore = LifePersistedState & {
   hydrate: (saved: LifePersistedState | null) => void;
   tick: (elapsedMilliseconds: number, now: number) => void;
   workHard: () => boolean;
+  grantAdEnergyReward: (now?: number) => boolean;
+  grantAdSalaryBonus: (now?: number) => boolean;
+  grantAdSpecialOpportunity: (now?: number) => boolean;
   rest: () => void;
   enjoyHobby: () => boolean;
   performWellnessAction: (actionId: WellnessActionId) => boolean;
@@ -341,6 +347,9 @@ export function createInitialLifeState(now = Date.now()): LifePersistedState {
     lastSeenTimestamp: now,
     lastSavedAt: now,
     nextLifeEventAt: futureEvent(now),
+    adRewardCooldowns: {},
+    nextWorkShiftMultiplier: 1,
+    extraOpportunityCredits: 0,
     tutorialStep: 0,
   };
 }
@@ -923,7 +932,8 @@ export const useLifeStore = create<LifeStore>((set, get) => ({
         return sum + position.quantity * (state.marketPrices[id] ?? 0) * (definition?.dividendYield ?? 0);
       }, 0)
       : 0;
-    const eventDue = now >= state.nextLifeEventAt && !state.activeLifeEvent;
+    const specialEventDue = state.extraOpportunityCredits > 0 && !state.activeLifeEvent;
+    const eventDue = (specialEventDue || now >= state.nextLifeEventAt) && !state.activeLifeEvent;
     const nextBase: Partial<LifeStore> = {
       ...dailyPatch(state, now),
       accruedMonthlyIncome: add(add(state.accruedMonthlyIncome, income), dividends),
@@ -935,6 +945,7 @@ export const useLifeStore = create<LifeStore>((set, get) => ({
       activeCourse: state.activeCourse,
       activeLifeEvent: eventDue ? createLifeEvent(now, state.marketSeed, state.health, state.stress) : state.activeLifeEvent,
       nextLifeEventAt: eventDue ? futureEvent(now) : state.nextLifeEventAt,
+      extraOpportunityCredits: specialEventDue ? Math.max(0, state.extraOpportunityCredits - 1) : state.extraOpportunityCredits,
       lastDividendAt: dividendDue ? now : state.lastDividendAt,
     };
     if (market) Object.assign(nextBase, {
@@ -972,7 +983,7 @@ export const useLifeStore = create<LifeStore>((set, get) => ({
     if (!job || state.energy < 5 || state.stress >= 98) return false;
     const lifestyleBonus = 1 + LIFESTYLE_ITEMS.filter((item) => state.ownedLifestyle.includes(item.id)).reduce((sum, item) => sum + item.bonus, 0);
     const traitBonus = state.character.traits.includes('hard-worker') ? 1.15 : 1;
-    const reward = job.hardWorkBonus * (1 + state.promotionLevel * 0.2) * legacyMultiplier(state.legacyPoints) * lifestyleBonus * traitBonus;
+    const reward = job.hardWorkBonus * (1 + state.promotionLevel * 0.2) * legacyMultiplier(state.legacyPoints) * lifestyleBonus * traitBonus * state.nextWorkShiftMultiplier;
     const performance = Math.min(100, state.performance + 10);
     const patch = dailyPatch(state);
     const progress = patch.dailyProgress ?? state.dailyProgress;
@@ -984,6 +995,35 @@ export const useLifeStore = create<LifeStore>((set, get) => ({
       performance,
       dailyProgress: { ...progress, workTaps: progress.workTaps + 1 },
       celebrationNonce: state.celebrationNonce,
+      nextWorkShiftMultiplier: 1,
+    });
+    return true;
+  },
+
+  grantAdEnergyReward: (now = Date.now()) => {
+    const state = get();
+    if (state.energy >= 100 || (state.adRewardCooldowns.energy ?? 0) > now) return false;
+    set({
+      energy: Math.min(100, state.energy + 20),
+      adRewardCooldowns: { ...state.adRewardCooldowns, energy: now + 10 * 60_000 },
+    });
+    return true;
+  },
+  grantAdSalaryBonus: (now = Date.now()) => {
+    const state = get();
+    if (!state.jobId || state.nextWorkShiftMultiplier > 1 || (state.adRewardCooldowns.salary ?? 0) > now) return false;
+    set({
+      nextWorkShiftMultiplier: 1.25,
+      adRewardCooldowns: { ...state.adRewardCooldowns, salary: now + 20 * 60_000 },
+    });
+    return true;
+  },
+  grantAdSpecialOpportunity: (now = Date.now()) => {
+    const state = get();
+    if (state.extraOpportunityCredits > 0 || (state.adRewardCooldowns.opportunity ?? 0) > now) return false;
+    set({
+      extraOpportunityCredits: 1,
+      adRewardCooldowns: { ...state.adRewardCooldowns, opportunity: now + 30 * 60_000 },
     });
     return true;
   },

@@ -1,5 +1,6 @@
 import React from 'react';
-import { Alert, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
+import { Alert, Pressable, ScrollView, StyleSheet, Switch, View } from 'react-native';
+import { Text } from '../components/LocalizedText';
 import { useShallow } from 'zustand/react/shallow';
 
 import { AppButton } from '../components/AppButton';

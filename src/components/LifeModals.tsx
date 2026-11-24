@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Modal, Pressable, StyleSheet, View } from 'react-native';
+import { Text } from './LocalizedText';
 import Animated, { useAnimatedStyle, useSharedValue, withSequence, withSpring, withTiming } from 'react-native-reanimated';
 import { useShallow } from 'zustand/react/shallow';
 
@@ -118,8 +119,9 @@ export function LifeModals() {
     if (completed) state.claimOffline(2);
   };
   const continueAfterMonth = () => {
+    const majorTransition = monthly?.birthday ? 'birthday_chapter' : monthly?.promotion ? 'career_milestone' : null;
     state.dismissMonthlySummary();
-    void showInterstitialIfEligible();
+    if (majorTransition) void showInterstitialIfEligible(majorTransition);
   };
   return (
     <>

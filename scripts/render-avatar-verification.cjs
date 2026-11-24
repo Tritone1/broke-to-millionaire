@@ -5,11 +5,19 @@ const { PNG } = require('pngjs');
 const root = path.resolve(__dirname, '..');
 const characterDir = path.join(root, 'assets', 'game', 'characters');
 const outputDir = path.join(root, 'artifacts');
-const CELL = 512;
-const FULL_HEIGHT = 768;
+const scaleArgument = process.argv.find((argument) => argument.startsWith('--scale='));
+const SCALE = Number(scaleArgument?.split('=')[1] ?? 1);
+const CELL = 512 * SCALE;
+const FULL_HEIGHT = 768 * SCALE;
+
+function assetName(name) {
+  if (SCALE === 1) return name;
+  const extension = path.extname(name);
+  return `${name.slice(0, -extension.length)}@${SCALE}x${extension}`;
+}
 
 function read(name) {
-  return PNG.sync.read(fs.readFileSync(path.join(characterDir, name)));
+  return PNG.sync.read(fs.readFileSync(path.join(characterDir, assetName(name))));
 }
 
 function blend(destination, dx, dy, rgba) {
@@ -74,7 +82,7 @@ for (let genderRow = 0; genderRow < 2; genderRow += 1) {
 }
 
 fs.mkdirSync(outputDir, { recursive: true });
-const outputPath = path.join(outputDir, 'avatar-verification.png');
+const outputPath = path.join(outputDir, `avatar-verification-${SCALE}x.png`);
 fs.writeFileSync(outputPath, PNG.sync.write(output));
 
 const fullHead = read('avatar_full_head_skin_2.png');
@@ -82,8 +90,8 @@ const fullNeck = read('avatar_full_neck_skin_2.png');
 const fullClothing = read('avatar_full_clothing.png');
 const fullNecklineFront = read('avatar_full_neckline_front.png');
 const fullHair = {
-  male: { back: read('avatar_full_hair_back_male.png'), front: read('avatar_full_hair_front_male.png') },
-  female: { back: read('avatar_full_hair_back_female.png'), front: read('avatar_full_hair_front_female.png') },
+  male: { back: read('avatar_full_hair_back_v4_male.png'), front: read('avatar_full_hair_front_v4_male.png') },
+  female: { back: read('avatar_full_hair_back_v4_female.png'), front: read('avatar_full_hair_front_v4_female.png') },
 };
 const fullOutput = new PNG({ width: CELL * 3, height: FULL_HEIGHT * 2 });
 fillBackground(fullOutput);
@@ -98,26 +106,29 @@ for (let genderRow = 0; genderRow < 2; genderRow += 1) {
     paintCell(fullHair[gender].front, fullOutput, column, 0, 3, 1, column, genderRow, FULL_HEIGHT);
   }
 }
-const fullOutputPath = path.join(outputDir, 'avatar-full-verification.png');
+const fullOutputPath = path.join(outputDir, `avatar-full-verification-${SCALE}x.png`);
 fs.writeFileSync(fullOutputPath, PNG.sync.write(fullOutput));
 
-const identityOutput = new PNG({ width: CELL * 6, height: CELL * 6 });
-fillBackground(identityOutput);
-for (let skinRow = 0; skinRow < 6; skinRow += 1) {
-  const identityHead = read(`avatar_portrait_head_v8_skin_${skinRow}.png`);
-  const identityNeck = read(`avatar_portrait_neck_v8_skin_${skinRow}.png`);
-  const genderRow = skinRow % 2;
-  const gender = genderRow === 0 ? 'male' : 'female';
-  const hairColumn = Math.floor(skinRow / 2) % 3;
-  for (let ethnicityColumn = 0; ethnicityColumn < 6; ethnicityColumn += 1) {
-    paintCell(hair[gender].back, identityOutput, hairColumn, 0, 3, 1, ethnicityColumn, skinRow);
-    paintCell(clothing, identityOutput, genderRow, 0, 2, 1, ethnicityColumn, skinRow);
-    paintCell(identityNeck, identityOutput, ethnicityColumn, genderRow, 6, 2, ethnicityColumn, skinRow);
-    paintCell(necklineFront, identityOutput, genderRow, 0, 2, 1, ethnicityColumn, skinRow);
-    paintCell(identityHead, identityOutput, ethnicityColumn, genderRow, 6, 2, ethnicityColumn, skinRow);
-    paintCell(hair[gender].front, identityOutput, hairColumn, 0, 3, 1, ethnicityColumn, skinRow);
+let identityOutputPath = null;
+if (SCALE === 1) {
+  const identityOutput = new PNG({ width: CELL * 6, height: CELL * 6 });
+  fillBackground(identityOutput);
+  for (let skinRow = 0; skinRow < 6; skinRow += 1) {
+    const identityHead = read(`avatar_portrait_head_v8_skin_${skinRow}.png`);
+    const identityNeck = read(`avatar_portrait_neck_v8_skin_${skinRow}.png`);
+    const genderRow = skinRow % 2;
+    const gender = genderRow === 0 ? 'male' : 'female';
+    const hairColumn = Math.floor(skinRow / 2) % 3;
+    for (let ethnicityColumn = 0; ethnicityColumn < 6; ethnicityColumn += 1) {
+      paintCell(hair[gender].back, identityOutput, hairColumn, 0, 3, 1, ethnicityColumn, skinRow);
+      paintCell(clothing, identityOutput, genderRow, 0, 2, 1, ethnicityColumn, skinRow);
+      paintCell(identityNeck, identityOutput, ethnicityColumn, genderRow, 6, 2, ethnicityColumn, skinRow);
+      paintCell(necklineFront, identityOutput, genderRow, 0, 2, 1, ethnicityColumn, skinRow);
+      paintCell(identityHead, identityOutput, ethnicityColumn, genderRow, 6, 2, ethnicityColumn, skinRow);
+      paintCell(hair[gender].front, identityOutput, hairColumn, 0, 3, 1, ethnicityColumn, skinRow);
+    }
   }
+  identityOutputPath = path.join(outputDir, `avatar-identity-verification-${SCALE}x.png`);
+  fs.writeFileSync(identityOutputPath, PNG.sync.write(identityOutput));
 }
-const identityOutputPath = path.join(outputDir, 'avatar-identity-verification.png');
-fs.writeFileSync(identityOutputPath, PNG.sync.write(identityOutput));
-process.stdout.write(`${outputPath}\n${fullOutputPath}\n${identityOutputPath}\n`);
+process.stdout.write(`${outputPath}\n${fullOutputPath}${identityOutputPath ? `\n${identityOutputPath}` : ''}\n`);

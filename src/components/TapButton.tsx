@@ -1,5 +1,6 @@
 import { useCallback, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
+import { Text } from './LocalizedText';
 import * as Haptics from 'expo-haptics';
 import Animated, {
   Easing,

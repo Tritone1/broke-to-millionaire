@@ -8,8 +8,13 @@ function pluginName(plugin: NonNullable<ExpoConfig['plugins']>[number]): string 
 }
 
 export default ({ config }: ConfigContext): ExpoConfig => {
-  const androidAdMobAppId = process.env.EXPO_PUBLIC_ADMOB_ANDROID_APP_ID?.trim() || TEST_ADMOB_ANDROID_APP_ID;
+  const productionAds = process.env.EXPO_PUBLIC_ADS_TEST_MODE === 'false';
+  const configuredAndroidAppId = process.env.EXPO_PUBLIC_ADMOB_ANDROID_APP_ID?.trim();
+  const androidAdMobAppId = configuredAndroidAppId || TEST_ADMOB_ANDROID_APP_ID;
   const iosAdMobAppId = process.env.EXPO_PUBLIC_ADMOB_IOS_APP_ID?.trim() || TEST_ADMOB_IOS_APP_ID;
+  if (productionAds && !configuredAndroidAppId) {
+    throw new Error('EXPO_PUBLIC_ADMOB_ANDROID_APP_ID is required when production ads are enabled.');
+  }
   const plugins = (config.plugins ?? []).filter((plugin) => ![
     'expo-build-properties',
     'expo-splash-screen',
@@ -66,8 +71,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       ...config.extra,
       monetization: {
         usingTestAdMobAppIds:
-          androidAdMobAppId === TEST_ADMOB_ANDROID_APP_ID ||
-          iosAdMobAppId === TEST_ADMOB_IOS_APP_ID,
+          androidAdMobAppId === TEST_ADMOB_ANDROID_APP_ID || iosAdMobAppId === TEST_ADMOB_IOS_APP_ID,
       },
     },
   };

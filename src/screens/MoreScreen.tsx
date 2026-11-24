@@ -1,5 +1,7 @@
+import { useCallback } from 'react';
 import { useNavigation, type NavigationProp } from '@react-navigation/native';
-import { ScrollView, StyleSheet, Text } from 'react-native';
+import { ScrollView, StyleSheet } from 'react-native';
+import { Text } from '../components/LocalizedText';
 
 import { AppButton } from '../components/AppButton';
 import { Card } from '../components/Card';
@@ -12,13 +14,19 @@ import { useTranslation } from '../hooks/useTranslation';
 import type { LifeRootParamList } from '../navigation/AppNavigator';
 import { calculateLifeNetWorth, useLifeStore } from '../store/lifeStore';
 import { colors } from '../theme';
+import { RewardedAdCard } from '../components/RewardedAdCard';
+import { useRewardedAdPlacement } from '../hooks/useRewardedAdPlacement';
 
 export function MoreScreen() {
   const navigation = useNavigation<NavigationProp<LifeRootParamList>>();
   const { t } = useTranslation();
   const character = useLifeStore((state) => state.character);
   const netWorth = useLifeStore((state) => toNumber(calculateLifeNetWorth(state)));
+  const extraOpportunityCredits = useLifeStore((state) => state.extraOpportunityCredits);
+  const opportunityReadyAt = useLifeStore((state) => state.adRewardCooldowns.opportunity);
   const casinoUnlocked = netWorth >= 25_000;
+  const applyOpportunityReward = useCallback(() => useLifeStore.getState().grantAdSpecialOpportunity(), []);
+  const opportunityAd = useRewardedAdPlacement({ placement: 'Extra special opportunity', applyReward: applyOpportunityReward });
   return (
     <Screen>
       <LifeHeader />
@@ -26,6 +34,17 @@ export function MoreScreen() {
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <Text style={styles.eyebrow}>{character.name.toUpperCase()}</Text>
         <Text style={styles.title}>{t('moreToExplore')}</Text>
+        <RewardedAdCard
+          title="Special Opportunity"
+          description="Watch an optional advertisement to receive one extra life opportunity. It does not bypass requirements or grant unlimited cash."
+          buttonLabel="WATCH AD · EXTRA OPPORTUNITY"
+          busy={opportunityAd.busy}
+          adsReady={opportunityAd.adsReady}
+          disabled={extraOpportunityCredits > 0}
+          readyAt={opportunityReadyAt}
+          message={opportunityAd.message}
+          onPress={() => void opportunityAd.watch()}
+        />
         <Card style={styles.card}><Text style={styles.icon}>🛒</Text><Text style={styles.cardTitle}>{t('store')}</Text><Text style={styles.body}>{t('storeDescription')}</Text><AppButton onPress={() => navigation.navigate('Store')}>{t('openStore').toUpperCase()}</AppButton></Card>
         <Card style={styles.card}><Text style={styles.icon}>🏠</Text><Text style={styles.cardTitle}>{t('living')}</Text><Text style={styles.body}>{t('livingDescription')}</Text><AppButton onPress={() => navigation.navigate('Living')}>{t('manageLife').toUpperCase()}</AppButton></Card>
         <Card style={styles.card}><Text style={styles.icon}>♥</Text><Text style={styles.cardTitle}>{t('wellness')}</Text><Text style={styles.body}>{t('wellnessDescription')}</Text><AppButton variant="green" onPress={() => navigation.navigate('Wellness')}>{t('openWellness').toUpperCase()}</AppButton></Card>

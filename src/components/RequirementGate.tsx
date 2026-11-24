@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
-import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Modal, Pressable, StyleSheet, View } from 'react-native';
+import { Text } from './LocalizedText';
 import { useShallow } from 'zustand/react/shallow';
 
 import { calculateLifeNetWorth, monthlyBillsFor, totalIncomePerSecond, useLifeStore } from '../store/lifeStore';
